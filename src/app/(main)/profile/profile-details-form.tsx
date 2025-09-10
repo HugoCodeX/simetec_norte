@@ -23,7 +23,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(1, { message: "Name is required" }),
+  name: z.string().trim().min(1, { message: "Nombre es requerido" }),
   image: z.string().optional().nullable(),
 });
 
@@ -90,7 +90,7 @@ export function ProfileDetailsForm({ user }: ProfileDetailsFormProps) {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Nombre</FormLabel>
                   <FormControl>
                     <Input {...field} placeholder="Full name" />
                   </FormControl>
@@ -147,7 +147,7 @@ export function ProfileDetailsForm({ user }: ProfileDetailsFormProps) {
               </div>
             )}
             <LoadingButton type="submit" loading={loading}>
-              Save changes
+              Guardar cambios
             </LoadingButton>
           </form>
         </Form>

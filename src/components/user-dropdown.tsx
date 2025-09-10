@@ -37,11 +37,11 @@ export function UserDropdown({ user }: UserDropdownProps) {
           ) : (
             <UserIcon />
           )}
-          <span className="max-w-[12rem] truncate">{user.name}</span>
+          <span className="max-w-[12rem] truncate">{user.email}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+        <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href="/profile">
@@ -73,14 +73,14 @@ function SignOutItem() {
     if (error) {
       toast.error(error.message || "Something went wrong");
     } else {
-      toast.success("Signed out successfully");
-      router.push("/sign-in");
+      toast.success("Sesión cerrada");
+      router.push("/");
     }
   }
 
   return (
     <DropdownMenuItem onClick={handleSignOut}>
-      <LogOutIcon className="size-4" /> <span>Sign out</span>
+      <LogOutIcon className="size-4" /> <span>Cerrar sesión</span>
     </DropdownMenuItem>
   );
 }

@@ -55,7 +55,7 @@ export function PasswordForm() {
     if (error) {
       setError(error.message || "Failed to change password");
     } else {
-      setStatus("Password changed");
+      setStatus("Contraseña actualizada");
       form.reset();
     }
   }
@@ -65,7 +65,7 @@ export function PasswordForm() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Change Password</CardTitle>
+        <CardTitle>Actualizar Contraseña</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -76,7 +76,7 @@ export function PasswordForm() {
               name="currentPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Current Password</FormLabel>
+                  <FormLabel>Contraseña Actual</FormLabel>
                   <FormControl>
                     <PasswordInput {...field} placeholder="Current password" />
                   </FormControl>
@@ -89,7 +89,7 @@ export function PasswordForm() {
               name="newPassword"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>New Password</FormLabel>
+                  <FormLabel>Nueva Contraseña</FormLabel>
                   <FormControl>
                     <PasswordInput {...field} placeholder="New password" />
                   </FormControl>
@@ -109,7 +109,7 @@ export function PasswordForm() {
               </div>
             )}
             <LoadingButton type="submit" loading={loading}>
-              Change password
+              Actualizar Contraseña
             </LoadingButton>
           </form>
         </Form>

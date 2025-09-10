@@ -20,7 +20,7 @@ export function LogoutEverywhereButton() {
       toast.error(error.message || "Failed to log out everywhere");
     } else {
       toast.success("Logged out from all devices");
-      router.push("/sign-in");
+      router.push("/");
     }
   }
 
@@ -31,7 +31,7 @@ export function LogoutEverywhereButton() {
       loading={loading}
       className="w-full"
     >
-      Log out everywhere
+      Cerrar sesión en todos los dispositivos
     </LoadingButton>
   );
 }

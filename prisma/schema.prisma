@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id            String    @id
+  id            String     @id
   name          String
   email         String
   emailVerified Boolean
@@ -25,6 +25,8 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
+  registros     Registro[] // Registros creados por este usuario
+  gastos        Gasto[]    // Gastos creados por este usuario
 
   @@unique([email])
   @@map("user")
@@ -73,4 +75,58 @@ model Verification {
   updatedAt  DateTime?
 
   @@map("verification")
+}
+
+model Registro {
+  id                   String           @id @default(cuid())
+  folio                String           @unique
+  fecha                DateTime
+  edificioCondominio   String?
+  direccion            String
+  deptoCasa            String?
+  block                String?
+  ciudad               String
+  administrador        String
+  empresaGas           String
+  nombre               String
+  rut                  String
+  telefono             String?
+  correoElectronico    String?
+  numeroMedidor        String
+  firma                String?          // Base64 de la imagen de firma
+  defectosCriticos     DefectoCritico[]
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  createdBy            String?          // ID del usuario que creó el registro
+  user                 User?            @relation(fields: [createdBy], references: [id])
+
+  @@map("registro")
+}
+
+model DefectoCritico {
+  id                   String   @id @default(cuid())
+  tipo                 String
+  instalacionAfectada  String
+  registroId           String
+  registro             Registro @relation(fields: [registroId], references: [id], onDelete: Cascade)
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("defecto_critico")
+}
+
+model Gasto {
+  id          String   @id @default(cuid())
+  folio       String   @unique
+  fecha       DateTime
+  item        String
+  descripcion String?
+  monto       Float
+  archivo     String?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("gasto")
 }

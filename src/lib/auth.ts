@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
-import { sendEmail } from "./email";
+// import { sendEmail } from "./email"; // Comentado para desactivar Resend
 import prisma from "./prisma";
 import { passwordSchema } from "./validation";
 
@@ -9,48 +9,17 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  socialProviders: {
-    google: {
-      clientId: process.env.GOOGLE_CLIENT_ID!,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-    },
-    github: {
-      clientId: process.env.GITHUB_CLIENT_ID!,
-      clientSecret: process.env.GITHUB_CLIENT_SECRET!,
-    },
-  },
   emailAndPassword: {
     enabled: true,
-    // requireEmailVerification: true, // Only if you want to block login completely
-    async sendResetPassword({ user, url }) {
-      await sendEmail({
-        to: user.email,
-        subject: "Reset your password",
-        text: `Click the link to reset your password: ${url}`,
-      });
-    },
+    requireEmailVerification: false,
   },
   emailVerification: {
-    sendOnSignUp: true,
+    sendOnSignUp: false,
     autoSignInAfterVerification: true,
-    async sendVerificationEmail({ user, url }) {
-      await sendEmail({
-        to: user.email,
-        subject: "Verify your email",
-        text: `Click the link to verify your email: ${url}`,
-      });
-    },
   },
   user: {
     changeEmail: {
-      enabled: true,
-      async sendChangeEmailVerification({ user, newEmail, url }) {
-        await sendEmail({
-          to: user.email,
-          subject: "Approve email change",
-          text: `Your email has been changed to ${newEmail}. Click the link to approve the change: ${url}`,
-        });
-      },
+      enabled: false,
     },
     additionalFields: {
       role: {
@@ -73,6 +42,11 @@ export const auth = betterAuth({
             message: "Password not strong enough",
           });
         }
+      }
+      
+      // Asignar rol invitado por defecto en el registro
+      if (ctx.path === "/sign-up/email") {
+        ctx.body.role = "invitado";
       }
     }),
   },

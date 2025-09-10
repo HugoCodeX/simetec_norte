@@ -73,33 +73,16 @@ export function SignInForm() {
     if (error) {
       setError(error.message || "Something went wrong");
     } else {
-      toast.success("Signed in successfully");
+      toast.success("Inicio de sesion exitoso");
       router.push(redirect ?? "/dashboard");
     }
   }
-
-  async function handleSocialSignIn(provider: "google" | "github") {
-    setError(null);
-    setLoading(true);
-
-    const { error } = await authClient.signIn.social({
-      provider,
-      callbackURL: redirect ?? "/dashboard",
-    });
-
-    setLoading(false);
-
-    if (error) {
-      setError(error.message || "Something went wrong");
-    }
-  }
-
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-lg md:text-xl">Sign In</CardTitle>
+        <CardTitle className="text-lg md:text-xl">Iniciar Sesion</CardTitle>
         <CardDescription className="text-xs md:text-sm">
-          Enter your email below to login to your account
+          Ingrese sus credenciales para iniciar sesion
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -110,11 +93,11 @@ export function SignInForm() {
               name="email"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Email</FormLabel>
+                  <FormLabel>Correo Electronico</FormLabel>
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder="simetec@ejemplo.com"
                       {...field}
                     />
                   </FormControl>
@@ -129,18 +112,18 @@ export function SignInForm() {
               render={({ field }) => (
                 <FormItem>
                   <div className="flex items-center">
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Contraseña</FormLabel>
                     <Link
                       href="/forgot-password"
                       className="ml-auto inline-block text-sm underline"
                     >
-                      Forgot your password?
+                      Olvidaste tu contraseña?
                     </Link>
                   </div>
                   <FormControl>
                     <PasswordInput
                       autoComplete="current-password"
-                      placeholder="Password"
+                      placeholder=""
                       {...field}
                     />
                   </FormControl>
@@ -160,7 +143,7 @@ export function SignInForm() {
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
-                  <FormLabel>Remember me</FormLabel>
+                  <FormLabel>Recordar contraseña</FormLabel>
                 </FormItem>
               )}
             />
@@ -172,32 +155,8 @@ export function SignInForm() {
             )}
 
             <LoadingButton type="submit" className="w-full" loading={loading}>
-              Login
+              Iniciar Sesion
             </LoadingButton>
-
-            <div className="flex w-full flex-col items-center justify-between gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                disabled={loading}
-                onClick={() => handleSocialSignIn("google")}
-              >
-                <GoogleIcon width="0.98em" height="1em" />
-                Sign in with Google
-              </Button>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full gap-2"
-                disabled={loading}
-                onClick={() => handleSocialSignIn("github")}
-              >
-                <GitHubIcon />
-                Sign in with Github
-              </Button>
-            </div>
           </form>
         </Form>
       </CardContent>
