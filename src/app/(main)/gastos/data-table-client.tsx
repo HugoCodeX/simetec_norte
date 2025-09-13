@@ -28,7 +28,8 @@ import {
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { DollarSignIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, FileIcon } from "lucide-react";
+import { DollarSignIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner"
 import { eliminarGasto } from "@/app/actions/gastos"
@@ -53,6 +54,7 @@ interface DataTableClientProps {
   currentUser?: {
     name: string;
     email: string;
+    role?: string;
   };
 }
 
@@ -126,13 +128,23 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                 Listado completo de gastos registrados ({filteredGastos.length} gastos)
               </CardDescription>
             </div>
-            <Button 
-              className="flex items-center gap-2"
-              onClick={handleCrearGasto}
-            >
-              <PlusIcon className="size-4" />
-              Crear Gasto
-            </Button>
+            <div className="flex items-center gap-2">
+              {currentUser?.role === 'admin' && (
+                <Link href="/presupuestos">
+                  <Button variant="outline" className="flex items-center gap-2">
+                    <SettingsIcon className="size-4" />
+                    Gestionar Presupuestos
+                  </Button>
+                </Link>
+              )}
+              <Button 
+                className="flex items-center gap-2"
+                onClick={handleCrearGasto}
+              >
+                <PlusIcon className="size-4" />
+                Crear Gasto
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

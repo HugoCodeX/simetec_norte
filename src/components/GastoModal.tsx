@@ -16,6 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon, AlertCircleIcon, UploadIcon, XIcon } from "lucide-react"
 import { toast } from "sonner"
 import { crearGasto, actualizarGasto } from "@/app/actions/gastos"
+import { obtenerPresupuestoUsuario } from "@/app/actions/presupuestos"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -35,7 +36,7 @@ interface Gasto {
 
 const ITEMS_GASTOS = [
   "ART.ASEO",
-  "PASAJE", 
+  "PASAJE",
   "PEAJE",
   "SELLOS",
   "ALOJAMIENTO",
@@ -78,9 +79,9 @@ interface FormErrors {
   monto?: string
 }
 
-export default function GastoModal({ 
-  open, 
-  onOpenChange, 
+export default function GastoModal({
+  open,
+  onOpenChange,
   gasto = null,
   currentUser,
   onSuccess
@@ -94,10 +95,11 @@ export default function GastoModal({
     monto: '',
     archivo: ''
   })
-  
+
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [presupuesto, setPresupuesto] = useState<any>(null)
 
   // Efecto para cargar datos cuando se edita
   useEffect(() => {
@@ -125,6 +127,24 @@ export default function GastoModal({
     setErrors({})
     setSelectedFile(null)
   }, [modoEdicion, gasto, open])
+
+  // Cargar presupuesto del usuario
+  useEffect(() => {
+    if (open && currentUser) {
+      cargarPresupuesto()
+    }
+  }, [open, currentUser])
+
+  const cargarPresupuesto = async () => {
+    try {
+      const result = await obtenerPresupuestoUsuario()
+      if (result.success) {
+        setPresupuesto(result.data)
+      }
+    } catch (error) {
+      console.error('Error al cargar presupuesto:', error)
+    }
+  }
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -172,7 +192,7 @@ export default function GastoModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    
+
     if (!validateForm()) {
       toast.error('Por favor, corrige los errores en el formulario')
       return
@@ -181,26 +201,29 @@ export default function GastoModal({
     setIsSubmitting(true)
 
     try {
-      const gastoData = {
-        folio: formData.folio,
-        fecha: new Date(formData.fecha),
-        item: formData.item,
-        descripcion: formData.descripcion || undefined,
-        monto: parseFloat(formData.monto),
-        archivo: formData.archivo || null
+      const formDataToSend = new FormData()
+      formDataToSend.append('folio', formData.folio)
+      formDataToSend.append('fecha', formData.fecha)
+      formDataToSend.append('item', formData.item)
+      formDataToSend.append('descripcion', formData.descripcion)
+      formDataToSend.append('monto', formData.monto)
+
+      // Agregar archivo si existe
+      if (selectedFile) {
+        formDataToSend.append('archivo', selectedFile)
       }
 
       let result
       if (modoEdicion && gasto) {
-        result = await actualizarGasto(gasto.id, gastoData)
+        result = await actualizarGasto(gasto.id, formDataToSend)
       } else {
-        result = await crearGasto(gastoData)
+        result = await crearGasto(formDataToSend)
       }
 
       if (result.success) {
         toast.success(
-          modoEdicion 
-            ? 'Gasto actualizado correctamente' 
+          modoEdicion
+            ? 'Gasto actualizado correctamente'
             : 'Gasto creado correctamente'
         )
         onSuccess()
@@ -243,8 +266,8 @@ export default function GastoModal({
             {modoEdicion ? 'Editar Gasto' : 'Crear Nuevo Gasto'}
           </DialogTitle>
           <DialogDescription>
-            {modoEdicion 
-              ? 'Modifica los datos del gasto seleccionado.' 
+            {modoEdicion
+              ? 'Modifica los datos del gasto seleccionado.'
               : 'Completa la información para registrar un nuevo gasto.'}
           </DialogDescription>
         </DialogHeader>
@@ -329,15 +352,40 @@ export default function GastoModal({
             )}
           </div>
 
-          {/* Usuario */}
-          <div>
-            <Label htmlFor="usuario">Usuario</Label>
-            <Input
-              id="usuario"
-              value={currentUser ? `${currentUser.name} (${currentUser.email})` : 'Usuario no disponible'}
-              disabled
-              className="bg-gray-50 text-gray-600"
-            />
+          {/* Usuario y Presupuesto */}
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="usuario">Usuario</Label>
+              <Input
+                id="usuario"
+                value={currentUser ? `${currentUser.name} (${currentUser.email})` : 'Usuario no disponible'}
+                disabled
+                className="bg-gray-50 text-gray-600"
+              />
+            </div>
+
+            {/* Mostrar presupuesto si existe */}
+            {presupuesto && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="font-medium text-blue-900 mb-2">Presupuesto Disponible</h4>
+                <div className="grid grid-cols-3 gap-4 text-sm">
+                  <div>
+                    <span className="text-blue-600">Asignado:</span>
+                    <p className="font-medium">${presupuesto.montoAsignado.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Utilizado:</span>
+                    <p className="font-medium">${presupuesto.montoUtilizado.toLocaleString()}</p>
+                  </div>
+                  <div>
+                    <span className="text-blue-600">Disponible:</span>
+                    <p className={`font-medium ${presupuesto.montoDisponible < 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      ${presupuesto.montoDisponible.toLocaleString()}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Monto */}
@@ -428,10 +476,10 @@ export default function GastoModal({
               disabled={isSubmitting}
               className="min-w-[120px]"
             >
-              {isSubmitting 
-                ? 'Procesando...' 
-                : modoEdicion 
-                  ? 'Actualizar' 
+              {isSubmitting
+                ? 'Procesando...'
+                : modoEdicion
+                  ? 'Actualizar'
                   : 'Crear Gasto'
               }
             </Button>

@@ -15,7 +15,7 @@ datasource db {
 }
 
 model User {
-  id            String     @id
+  id            String        @id
   name          String
   email         String
   emailVerified Boolean
@@ -25,8 +25,9 @@ model User {
   updatedAt     DateTime
   sessions      Session[]
   accounts      Account[]
-  registros     Registro[] // Registros creados por este usuario
-  gastos        Gasto[]    // Gastos creados por este usuario
+  registros     Registro[]    // Registros creados por este usuario
+  gastos        Gasto[]       // Gastos creados por este usuario
+  presupuesto   Presupuesto?  // Presupuesto asignado al usuario
 
   @@unique([email])
   @@map("user")
@@ -129,4 +130,20 @@ model Gasto {
   updatedAt   DateTime @updatedAt
 
   @@map("gasto")
+}
+
+model Presupuesto {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  montoAsignado   Float    // Monto total asignado
+  montoUtilizado  Float    @default(0) // Monto ya gastado
+  montoDisponible Float    // Monto disponible (calculado: asignado - utilizado)
+  periodo         String   // Ej: "2024-01", "2024-Q1", etc.
+  activo          Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  createdBy       String   // ID del admin que creó el presupuesto
+
+  @@map("presupuesto")
 }
