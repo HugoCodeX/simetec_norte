@@ -40,7 +40,28 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
     }
 
-    const { registros, datosNotificacion }: { registros: Registro[], datosNotificacion: NotificacionData } = await request.json();
+    let registros: Registro[];
+    let datosNotificacion: NotificacionData;
+
+    // Manejar tanto JSON como form data
+    const contentType = request.headers.get('content-type');
+    if (contentType?.includes('application/json')) {
+      const data = await request.json();
+      registros = data.registros;
+      datosNotificacion = data.datosNotificacion;
+    } else {
+      // Manejar form data
+      const formData = await request.formData();
+      const registrosStr = formData.get('registros') as string;
+      const datosStr = formData.get('datosNotificacion') as string;
+      
+      if (!registrosStr || !datosStr) {
+        return NextResponse.json({ error: 'Datos de formulario incompletos' }, { status: 400 });
+      }
+      
+      registros = JSON.parse(registrosStr);
+      datosNotificacion = JSON.parse(datosStr);
+    }
 
     if (!registros || registros.length === 0) {
       return NextResponse.json({ error: 'No se proporcionaron registros' }, { status: 400 });

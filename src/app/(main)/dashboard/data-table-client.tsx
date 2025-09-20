@@ -265,28 +265,38 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       const isWebView = isAndroidWebView();
       
       if (isWebView) {
-        // Para WebView de Android, intentar múltiples métodos
+        // Para WebView de Android, usar el mismo patrón que funciona en descarga individual
         try {
-          // Método 1: Usar window.open con data URL
-          const arrayBuffer = await blob.arrayBuffer();
-          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
-          const dataUrl = `data:application/pdf;base64,${base64}`;
-          const fileName = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
+          // Método 1: Crear un enlace temporal que simule una descarga directa
+          const tempForm = document.createElement('form');
+          tempForm.method = 'POST';
+          tempForm.action = '/api/notificacion-defectos';
+          tempForm.target = '_blank';
+          tempForm.style.display = 'none';
           
-          // Intentar abrir en nueva ventana
-          const newWindow = window.open(dataUrl, '_blank');
-          if (!newWindow) {
-            throw new Error('Popup blocked');
-          }
+          // Agregar los datos como campos ocultos
+          const registrosInput = document.createElement('input');
+          registrosInput.type = 'hidden';
+          registrosInput.name = 'registros';
+          registrosInput.value = JSON.stringify(registrosParaDescargar);
+          
+          const datosInput = document.createElement('input');
+          datosInput.type = 'hidden';
+          datosInput.name = 'datosNotificacion';
+          datosInput.value = JSON.stringify(datosNotificacion);
+          
+          tempForm.appendChild(registrosInput);
+          tempForm.appendChild(datosInput);
+          document.body.appendChild(tempForm);
+          tempForm.submit();
+          document.body.removeChild(tempForm);
         } catch (webViewError) {
-          // Método 2: Fallback con blob URL y click programático
+          // Método 2: Fallback con blob URL
           const downloadUrl = URL.createObjectURL(blob);
           const link = document.createElement('a');
           link.href = downloadUrl;
           link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
           link.style.display = 'none';
-          link.target = '_blank';
-          link.rel = 'noopener noreferrer';
           document.body.appendChild(link);
           link.click();
           
