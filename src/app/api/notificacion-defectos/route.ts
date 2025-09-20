@@ -342,14 +342,12 @@ export async function POST(request: NextRequest) {
         xPos = 50;
         rowData.forEach((data, index) => {
           // Calcular posición vertical centrada para el texto
+          doc.font('Arial').fontSize(8); // Establecer fuente y tamaño antes de calcular altura
           const textY = yPos + (rowHeight - doc.heightOfString(data, { 
-            width: columnWidths[index] - 4,
-            fontSize: 8
+            width: columnWidths[index] - 4
           })) / 2;
           
           doc.fillColor('#000000')
-             .font('Arial')
-             .fontSize(8)
              .text(data, xPos + 2, textY, {
                width: columnWidths[index] - 4,
                align: index === 2 ? 'left' : 'center'
