@@ -29,6 +29,11 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const formularioId = resolvedParams.id
   console.log('ID del formulario:', formularioId)
 
+  // Verificar si es preview (para WebView de Android)
+  const { searchParams } = new URL(request.url)
+  const preview = searchParams.get('preview') === '1'
+  console.log('Modo preview:', preview)
+
   // Buscar en la tabla de registros en lugar de formularios
   const registro = await prisma.registro.findUnique({
     where: { id: formularioId },
@@ -601,11 +606,12 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     doc.on('end', () => resolve(Buffer.concat(bufs)))
   })
 
+  // Soporte de vista previa inline del PDF (?preview=1)
   return new Response(pdfBuffer as any, {
     status: 200,
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="registro_defectos_criticos_${registro.folio}.pdf"`,
+      'Content-Disposition': `${preview ? 'inline' : 'attachment'}; filename="registro_defectos_criticos_${registro.folio}.pdf"`,
     }
   })
   } catch (error) {

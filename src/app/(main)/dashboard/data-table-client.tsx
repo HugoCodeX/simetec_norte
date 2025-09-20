@@ -100,28 +100,44 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     }
   };
 
-  // Función para descargar PDF
+  // Función para detectar si estamos en WebView de Android
+  const isAndroidWebView = () => {
+    const userAgent = navigator.userAgent.toLowerCase();
+    return userAgent.includes('android') && (userAgent.includes('wv') || userAgent.includes('webview'));
+  };
+
+  // Función para descargar PDF compatible con WebView de Android
   const handleDescargarPDF = async (registro: Registro) => {
     try {
-      // Usar la nueva API route para generar el PDF
-      const response = await fetch(`/api/formularios/${registro.id}`);
+      const isWebView = isAndroidWebView();
       
-      if (!response.ok) {
-        throw new Error('Error al generar PDF');
+      // Para WebView de Android, usar preview=1 para mostrar inline
+      const url = `/api/formularios/${registro.id}${isWebView ? '?preview=1' : ''}`;
+      
+      if (isWebView) {
+        // En WebView de Android, abrir en nueva ventana/pestaña
+        window.open(url, '_blank');
+      } else {
+        // En navegadores normales, usar el método tradicional de descarga
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error('Error al generar PDF');
+        }
+        
+        // Obtener el blob del PDF
+        const blob = await response.blob();
+        
+        // Crear enlace de descarga
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `registro_${registro.folio}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
       }
-      
-      // Obtener el blob del PDF
-      const blob = await response.blob();
-      
-      // Crear enlace de descarga
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `registro_${registro.folio}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error al descargar PDF:', error);
       alert('Error al descargar el PDF. Por favor, inténtalo de nuevo.');
