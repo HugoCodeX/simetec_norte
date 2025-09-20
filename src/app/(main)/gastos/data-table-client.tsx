@@ -41,7 +41,7 @@ interface Gasto {
   folio: string;
   fecha: Date;
   item: string;
-  descripcion?: string;
+  descripcion: string | null;
   usuario: string;
   monto: number;
   archivo: string | null;
@@ -61,7 +61,7 @@ interface DataTableClientProps {
 export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [gastoParaEditar, setGastoParaEditar] = useState<Gasto | null>(null);
+  const [gastoParaEditar, setGastoParaEditar] = useState<Gasto | undefined>(undefined);
 
   // Filtrar gastos basado en el término de búsqueda
   const filteredGastos = gastos.filter((gasto) => {
@@ -78,12 +78,12 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
   // Función para cerrar modal y resetear estado
   const handleCloseModal = () => {
     setModalOpen(false);
-    setGastoParaEditar(null);
+    setGastoParaEditar(undefined);
   };
 
   // Función para abrir modal en modo creación
   const handleCrearGasto = () => {
-    setGastoParaEditar(null);
+    setGastoParaEditar(undefined);
     setModalOpen(true);
   };
 

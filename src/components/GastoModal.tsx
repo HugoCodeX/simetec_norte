@@ -26,7 +26,7 @@ interface Gasto {
   folio: string
   fecha: Date
   item: string
-  descripcion?: string
+  descripcion: string | null
   monto: number
   archivo: string | null
   usuario: string
@@ -82,7 +82,7 @@ interface FormErrors {
 export default function GastoModal({
   open,
   onOpenChange,
-  gasto = null,
+  gasto = undefined,
   currentUser,
   onSuccess
 }: GastoModalProps) {
@@ -244,6 +244,7 @@ export default function GastoModal({
       folio: '',
       fecha: format(new Date(), 'yyyy-MM-dd'),
       item: '',
+      descripcion: '',
       monto: '',
       archivo: ''
     })
