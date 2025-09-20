@@ -487,18 +487,20 @@ export async function POST(request: NextRequest) {
 
     console.log('Tamaño del PDF generado:', pdfBuffer.length, 'bytes')
 
-    // Retornar el PDF con headers mejorados
+    // Retornar el PDF con headers optimizados para WebView
     const filename = `notificacion_defectos_${fechaNotificacion.replace(/-/g, '_')}.pdf`;
     console.log('Enviando PDF con nombre:', filename)
     
-    return new Response(new Uint8Array(pdfBuffer), {
+    return new Response(pdfBuffer as any, {
       headers: {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="${filename}"`,
-        'Content-Length': pdfBuffer.length.toString(),
         'Cache-Control': 'no-cache, no-store, must-revalidate',
         'Pragma': 'no-cache',
-        'Expires': '0'
+        'Expires': '0',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type'
       },
     });
 
