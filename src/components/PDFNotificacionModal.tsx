@@ -97,6 +97,14 @@ export default function PDFNotificacionModal({
 
   const handleClose = () => {
     if (!isGenerating) {
+      // Limpiar formulario al cerrar
+      setFormData({
+        comunidad: '',
+        direccionComunidad: '',
+        administrador: '',
+        fechaNotificacion: new Date().toISOString().split('T')[0],
+        empresaDistribuidora: '',
+      });
       onClose();
     }
   };

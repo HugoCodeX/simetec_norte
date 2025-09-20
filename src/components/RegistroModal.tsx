@@ -84,6 +84,9 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
         if (registroParaEditar.firma) {
           setFirmaRealizada(true)
           setIsSignatureActive(false)
+        } else {
+          setFirmaRealizada(false)
+          setIsSignatureActive(false)
         }
         
         // Cargar defectos críticos si existen
@@ -94,10 +97,40 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
             instalacionAfectada: defecto.instalacionAfectada
           }))
           setDefectosCriticos(defectosConId)
+        } else {
+          setDefectosCriticos([])
         }
       } else {
-        // Modo creación: obtener próximo folio y fecha actual
+        // Modo creación: limpiar formulario y obtener próximo folio y fecha actual
         const fechaActual = new Date().toISOString().split('T')[0]
+        
+        // Limpiar completamente el formulario
+        setFormData({
+          folio: '',
+          fecha: fechaActual,
+          edificioCondominio: '',
+          direccion: '',
+          deptoCasa: '',
+          block: '',
+          ciudad: '',
+          administrador: '',
+          empresaGas: '',
+          nombre: '',
+          rut: '',
+          telefono: '',
+          correoElectronico: '',
+          numeroMedidor: '',
+          firma: ''
+        })
+        setDefectosCriticos([])
+        setFirmaRealizada(false)
+        setIsSignatureActive(false)
+        setErrors({})
+        
+        // Limpiar canvas de firma si existe
+        if (signatureRef.current) {
+          signatureRef.current.clear()
+        }
         
         const obtenerFolio = async () => {
           try {
@@ -105,14 +138,11 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
             if (result.success && result.folio) {
               setFormData(prev => ({ 
                 ...prev, 
-                folio: result.folio,
-                fecha: fechaActual
+                folio: result.folio
               }))
             }
           } catch (error) {
             console.error('Error al obtener próximo folio:', error)
-            // Establecer fecha aunque falle el folio
-            setFormData(prev => ({ ...prev, fecha: fechaActual }))
           }
         }
         obtenerFolio()

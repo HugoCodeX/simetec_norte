@@ -101,31 +101,33 @@ export default function GastoModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [presupuesto, setPresupuesto] = useState<any>(null)
 
-  // Efecto para cargar datos cuando se edita
+  // Efecto para cargar datos cuando se edita o limpiar cuando se crea
   useEffect(() => {
-    if (modoEdicion && gasto) {
-      setFormData({
-        folio: gasto.folio,
-        fecha: format(new Date(gasto.fecha), 'yyyy-MM-dd'),
-        item: gasto.item,
-        descripcion: gasto.descripcion || '',
-        monto: gasto.monto.toString(),
-        archivo: gasto.archivo || ''
-      })
-    } else {
-      // Generar folio automático para nuevos gastos
-      const nuevoFolio = `G-${Date.now().toString().slice(-6)}`
-      setFormData({
-        folio: nuevoFolio,
-        fecha: format(new Date(), 'yyyy-MM-dd'),
-        item: '',
-        descripcion: '',
-        monto: '',
-        archivo: ''
-      })
+    if (open) {
+      if (modoEdicion && gasto) {
+        setFormData({
+          folio: gasto.folio,
+          fecha: format(new Date(gasto.fecha), 'yyyy-MM-dd'),
+          item: gasto.item,
+          descripcion: gasto.descripcion || '',
+          monto: gasto.monto.toString(),
+          archivo: gasto.archivo || ''
+        })
+      } else {
+        // Modo creación: limpiar formulario completamente
+        const nuevoFolio = `G-${Date.now().toString().slice(-6)}`
+        setFormData({
+          folio: nuevoFolio,
+          fecha: format(new Date(), 'yyyy-MM-dd'),
+          item: '',
+          descripcion: '',
+          monto: '',
+          archivo: ''
+        })
+      }
+      setErrors({})
+      setSelectedFile(null)
     }
-    setErrors({})
-    setSelectedFile(null)
   }, [modoEdicion, gasto, open])
 
   // Cargar presupuesto del usuario
