@@ -111,24 +111,46 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     try {
       const isWebView = isAndroidWebView();
       
-      // Para WebView de Android, usar preview=1 para mostrar inline
-      const url = `/api/formularios/${registro.id}${isWebView ? '?preview=1' : ''}`;
+      // Usar siempre el método de fetch pero con diferentes configuraciones
+      const url = `/api/formularios/${registro.id}`;
+      const response = await fetch(url);
+      
+      if (!response.ok) {
+        throw new Error('Error al generar PDF');
+      }
+      
+      // Obtener el blob del PDF
+      const blob = await response.blob();
       
       if (isWebView) {
-        // En WebView de Android, abrir en nueva ventana/pestaña
-        window.open(url, '_blank');
-      } else {
-        // En navegadores normales, usar el método tradicional de descarga
-        const response = await fetch(url);
-        
-        if (!response.ok) {
-          throw new Error('Error al generar PDF');
+        // Para WebView de Android, intentar múltiples métodos
+        try {
+          // Método 1: Usar la URL directa del API
+          const directLink = document.createElement('a');
+          directLink.href = url;
+          directLink.download = `registro_${registro.folio}.pdf`;
+          directLink.target = '_blank';
+          directLink.rel = 'noopener noreferrer';
+          document.body.appendChild(directLink);
+          directLink.click();
+          document.body.removeChild(directLink);
+        } catch (webViewError) {
+          // Método 2: Fallback con blob URL
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `registro_${registro.folio}.pdf`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }, 100);
         }
-        
-        // Obtener el blob del PDF
-        const blob = await response.blob();
-        
-        // Crear enlace de descarga
+      } else {
+        // En navegadores normales, usar el método tradicional
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = downloadUrl;
