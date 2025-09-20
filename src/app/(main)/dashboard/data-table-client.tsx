@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon } from "lucide-react";
+import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, Loader2 } from "lucide-react";
 import RegistroModal from "@/components/RegistroModal";
 import { useState } from "react";
 // Removida importación de generarPDFRegistro - ahora usamos API route
@@ -63,6 +63,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [registroParaEditar, setRegistroParaEditar] = useState<Registro | null>(null);
   const [modoEdicion, setModoEdicion] = useState(false);
+  const [descargandoPDF, setDescargandoPDF] = useState<string | null>(null);
 
   // Filtrar registros basado en el término de búsqueda
   const filteredRegistros = registros.filter((registro) => {
@@ -108,6 +109,9 @@ export function DataTableClient({ registros }: DataTableClientProps) {
 
   // Función para descargar PDF compatible con WebView de Android
   const handleDescargarPDF = async (registro: Registro) => {
+    // Activar estado de carga para este registro específico
+    setDescargandoPDF(registro.id);
+    
     try {
       const isWebView = isAndroidWebView();
       
@@ -163,6 +167,9 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     } catch (error) {
       console.error('Error al descargar PDF:', error);
       alert('Error al descargar el PDF. Por favor, inténtalo de nuevo.');
+    } finally {
+      // Desactivar estado de carga
+      setDescargandoPDF(null);
     }
   };
 
@@ -242,9 +249,14 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                             variant="outline" 
                             className="h-9 w-9 p-0 hover:bg-orange-50 hover:border-orange-300"
                             onClick={() => handleDescargarPDF(registro)}
-                            title="Descargar PDF"
+                            disabled={descargandoPDF === registro.id}
+                            title={descargandoPDF === registro.id ? "Descargando..." : "Descargar PDF"}
                           >
-                            <DownloadIcon className="h-4 w-4 text-orange-500" />
+                            {descargandoPDF === registro.id ? (
+                              <Loader2 className="h-4 w-4 text-orange-500 animate-spin" />
+                            ) : (
+                              <DownloadIcon className="h-4 w-4 text-orange-500" />
+                            )}
                           </Button>
                           <Button size="sm" variant="outline" className="h-9 w-9 p-0 hover:bg-indigo-50 hover:border-indigo-300">
                             <EyeIcon className="h-4 w-4 text-indigo-500" />
