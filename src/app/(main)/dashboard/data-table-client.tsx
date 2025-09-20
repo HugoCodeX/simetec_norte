@@ -265,20 +265,36 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       const isWebView = isAndroidWebView();
       
       if (isWebView) {
-        // Para WebView de Android, usar directamente el blob URL ya que el método directo
-        // no funciona con POST requests que requieren datos
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(downloadUrl);
-        }, 100);
+        // Para WebView de Android, intentar múltiples métodos
+        try {
+          // Método 1: Usar window.open con data URL
+          const arrayBuffer = await blob.arrayBuffer();
+          const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+          const dataUrl = `data:application/pdf;base64,${base64}`;
+          const fileName = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
+          
+          // Intentar abrir en nueva ventana
+          const newWindow = window.open(dataUrl, '_blank');
+          if (!newWindow) {
+            throw new Error('Popup blocked');
+          }
+        } catch (webViewError) {
+          // Método 2: Fallback con blob URL y click programático
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
+          link.style.display = 'none';
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer';
+          document.body.appendChild(link);
+          link.click();
+          
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }, 100);
+        }
       } else {
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
