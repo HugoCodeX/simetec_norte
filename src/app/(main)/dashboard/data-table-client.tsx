@@ -265,29 +265,20 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       const isWebView = isAndroidWebView();
       
       if (isWebView) {
-        try {
-          const directLink = document.createElement('a');
-          directLink.href = '/api/notificacion-defectos';
-          directLink.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
-          directLink.target = '_blank';
-          directLink.rel = 'noopener noreferrer';
-          document.body.appendChild(directLink);
-          directLink.click();
-          document.body.removeChild(directLink);
-        } catch (webViewError) {
-          const downloadUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(downloadUrl);
-          }, 100);
-        }
+        // Para WebView de Android, usar directamente el blob URL ya que el método directo
+        // no funciona con POST requests que requieren datos
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(downloadUrl);
+        }, 100);
       } else {
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
