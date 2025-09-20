@@ -27,10 +27,12 @@ import {
   PaginationPrevious,
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { format } from "date-fns";
 import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, Loader2 } from "lucide-react";
 import RegistroModal from "@/components/RegistroModal";
-import { useState } from "react";
+import PDFNotificacionModal, { NotificacionData } from "@/components/PDFNotificacionModal";
+import { useState, useEffect } from "react";
 // Removida importación de generarPDFRegistro - ahora usamos API route
 
 interface Registro {
@@ -64,6 +66,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [registroParaEditar, setRegistroParaEditar] = useState<Registro | null>(null);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [descargandoPDF, setDescargandoPDF] = useState<string | null>(null);
+  const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<string>>(new Set());
+  const [modalNotificacionOpen, setModalNotificacionOpen] = useState(false);
 
   // Filtrar registros basado en el término de búsqueda
   const filteredRegistros = registros.filter((registro) => {
@@ -77,6 +81,18 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       (registro.edificioCondominio && registro.edificioCondominio.toLowerCase().includes(searchLower))
     );
   });
+
+  // Limpiar selecciones inválidas cuando cambian los registros o el filtro
+  useEffect(() => {
+    const registrosValidosIds = new Set(registros.map(r => r.id));
+    const seleccionesValidas = new Set(
+      Array.from(registrosSeleccionados).filter(id => registrosValidosIds.has(id))
+    );
+    
+    if (seleccionesValidas.size !== registrosSeleccionados.size) {
+      setRegistrosSeleccionados(seleccionesValidas);
+    }
+  }, [registros, registrosSeleccionados]);
 
   // Función para abrir modal en modo creación
   const handleCrearRegistro = () => {
@@ -98,6 +114,34 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     if (!open) {
       setRegistroParaEditar(null);
       setModoEdicion(false);
+    }
+  };
+
+  // Funciones para manejar selección de registros
+  const handleSeleccionarRegistro = (registroId: string) => {
+    const nuevosSeleccionados = new Set(registrosSeleccionados);
+    if (nuevosSeleccionados.has(registroId)) {
+      nuevosSeleccionados.delete(registroId);
+    } else {
+      nuevosSeleccionados.add(registroId);
+    }
+    setRegistrosSeleccionados(nuevosSeleccionados);
+  };
+
+  const handleSeleccionarTodos = () => {
+    const registrosFiltradosIds = filteredRegistros.map(r => r.id);
+    const todosSeleccionados = registrosFiltradosIds.every(id => registrosSeleccionados.has(id));
+    
+    if (todosSeleccionados) {
+      // Si todos los filtrados están seleccionados, deseleccionar solo los filtrados
+      const nuevosSeleccionados = new Set(registrosSeleccionados);
+      registrosFiltradosIds.forEach(id => nuevosSeleccionados.delete(id));
+      setRegistrosSeleccionados(nuevosSeleccionados);
+    } else {
+      // Seleccionar todos los registros filtrados (mantener los ya seleccionados que no están en el filtro)
+      const nuevosSeleccionados = new Set(registrosSeleccionados);
+      registrosFiltradosIds.forEach(id => nuevosSeleccionados.add(id));
+      setRegistrosSeleccionados(nuevosSeleccionados);
     }
   };
 
@@ -173,6 +217,98 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     }
   };
 
+  // Función para descargar múltiples PDFs seleccionados
+  const handleDescargarPDFsSeleccionados = async () => {
+    if (registrosSeleccionados.size === 0) {
+      alert('Por favor, selecciona al menos un registro para descargar.');
+      return;
+    }
+
+    // Abrir modal para capturar datos adicionales
+    setModalNotificacionOpen(true);
+  };
+
+  const handleGenerarPDFNotificacion = async (datosNotificacion: NotificacionData) => {
+    setDescargandoPDF('multiple');
+    
+    try {
+      // Obtener registros únicos basados en los IDs seleccionados
+      const registrosParaDescargar = registros.filter(r => registrosSeleccionados.has(r.id));
+      
+      // Verificar que no hay duplicados
+      const idsUnicos = new Set(registrosParaDescargar.map(r => r.id));
+      if (idsUnicos.size !== registrosParaDescargar.length) {
+        console.warn('Se detectaron registros duplicados, filtrando...');
+        const registrosSinDuplicados = registrosParaDescargar.filter((registro, index, array) => 
+          array.findIndex(r => r.id === registro.id) === index
+        );
+        registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
+      }
+      
+      // Crear el PDF con el nuevo diseño usando los datos del modal
+      const response = await fetch('/api/notificacion-defectos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          registros: registrosParaDescargar,
+          datosNotificacion,
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Error al generar PDF de notificación');
+      }
+      
+      const blob = await response.blob();
+      const isWebView = isAndroidWebView();
+      
+      if (isWebView) {
+        try {
+          const directLink = document.createElement('a');
+          directLink.href = '/api/notificacion-defectos';
+          directLink.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
+          directLink.target = '_blank';
+          directLink.rel = 'noopener noreferrer';
+          document.body.appendChild(directLink);
+          directLink.click();
+          document.body.removeChild(directLink);
+        } catch (webViewError) {
+          const downloadUrl = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = downloadUrl;
+          link.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
+          link.style.display = 'none';
+          document.body.appendChild(link);
+          link.click();
+          
+          setTimeout(() => {
+            document.body.removeChild(link);
+            URL.revokeObjectURL(downloadUrl);
+          }, 100);
+        }
+      } else {
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(downloadUrl);
+      }
+      
+      // Limpiar selección después de descargar
+      setRegistrosSeleccionados(new Set());
+    } catch (error) {
+      console.error('Error al generar PDF de notificación:', error);
+      alert('Error al generar PDF de notificación. Por favor, inténtalo de nuevo.');
+    } finally {
+      setDescargandoPDF(null);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -197,8 +333,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
           </div>
         </CardHeader>
         <CardContent>
-          {/* Buscador */}
-          <div className="mb-6">
+          {/* Buscador y controles de selección */}
+          <div className="mb-6 space-y-4">
             <div className="relative max-w-sm">
               <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
@@ -208,6 +344,40 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+            
+            {/* Controles de selección masiva */}
+            {registrosSeleccionados.size > 0 && (
+              <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <span className="text-sm font-medium text-blue-700">
+                  {registrosSeleccionados.size} registro{registrosSeleccionados.size !== 1 ? 's' : ''} seleccionado{registrosSeleccionados.size !== 1 ? 's' : ''}
+                </span>
+                <Button
+                  size="sm"
+                  onClick={handleDescargarPDFsSeleccionados}
+                  disabled={descargandoPDF === 'multiple'}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {descargandoPDF === 'multiple' ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Descargando...
+                    </>
+                  ) : (
+                    <>
+                      <DownloadIcon className="h-4 w-4 mr-2" />
+                      Descargar PDFs ({registrosSeleccionados.size})
+                    </>
+                  )}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRegistrosSeleccionados(new Set())}
+                >
+                  Limpiar selección
+                </Button>
+              </div>
+            )}
           </div>
           
           {filteredRegistros.length === 0 ? (
@@ -221,6 +391,13 @@ export function DataTableClient({ registros }: DataTableClientProps) {
               <Table className="border-separate border-spacing-0">
                 <TableHeader className="bg-muted/50">
                   <TableRow className="border-b-2 border-border">
+                    <TableHead className="h-14 px-4 py-4 font-semibold text-center border-r-2 border-border w-12">
+                      <Checkbox
+                        checked={filteredRegistros.length > 0 && filteredRegistros.every(r => registrosSeleccionados.has(r.id))}
+                        onCheckedChange={handleSeleccionarTodos}
+                        aria-label="Seleccionar todos"
+                      />
+                    </TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ACCIONES</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
@@ -241,6 +418,13 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 <TableBody>
                   {filteredRegistros.map((registro) => (
                     <TableRow key={registro.id} className="border-b hover:bg-muted/30 transition-colors">
+                      <TableCell className="h-16 px-4 py-4 text-center border-r-2 border-border">
+                        <Checkbox
+                          checked={registrosSeleccionados.has(registro.id)}
+                          onCheckedChange={() => handleSeleccionarRegistro(registro.id)}
+                          aria-label={`Seleccionar registro ${registro.folio}`}
+                        />
+                      </TableCell>
                       <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{registro.folio}</TableCell>
                       <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
                         <div className="flex items-center gap-2">
@@ -329,6 +513,13 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         onOpenChange={handleCloseModal}
         registroParaEditar={registroParaEditar}
         modoEdicion={modoEdicion}
+      />
+      
+      <PDFNotificacionModal
+        isOpen={modalNotificacionOpen}
+        onClose={() => setModalNotificacionOpen(false)}
+        onGenerate={handleGenerarPDFNotificacion}
+        registrosSeleccionados={Array.from(registrosSeleccionados)}
       />
     </>
   );
