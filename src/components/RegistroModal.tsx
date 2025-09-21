@@ -533,10 +533,14 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                 <SelectValue placeholder="Seleccione empresa" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="metrogas">Metrogas</SelectItem>
-                <SelectItem value="lipigas">Lipigas</SelectItem>
-                <SelectItem value="gasco">Gasco</SelectItem>
-                <SelectItem value="abastible">Abastible</SelectItem>
+                <SelectItem value="Metrogas">Metrogas</SelectItem>
+                <SelectItem value="Lipigas">Lipigas</SelectItem>
+                <SelectItem value="Gasco">Gasco</SelectItem>
+                <SelectItem value="Abastible">Abastible</SelectItem>
+                <SelectItem value="Intergas">Intergas</SelectItem>
+                <SelectItem value="Gassur">GasSur</SelectItem>
+                <SelectItem value="Equipo GLP">Equipo GLP</SelectItem>
+
               </SelectContent>
             </Select>
             {errors.empresaGas && (
