@@ -232,10 +232,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     setDescargandoPDF('multiple');
     
     try {
-      // Obtener registros únicos basados en los IDs seleccionados
       const registrosParaDescargar = registros.filter(r => registrosSeleccionados.has(r.id));
       
-      // Verificar que no hay duplicados
       const idsUnicos = new Set(registrosParaDescargar.map(r => r.id));
       if (idsUnicos.size !== registrosParaDescargar.length) {
         console.warn('Se detectaron registros duplicados, filtrando...');
@@ -244,11 +242,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         );
         registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
       }
-      
-      // Extraer IDs de los registros seleccionados
       const registroIds = registrosParaDescargar.map(r => r.id).join(',');
       
-      // Construir URL con parámetros simples como en el método anterior que funcionaba
       const params = new URLSearchParams({
         ids: registroIds,
         comunidad: datosNotificacion.comunidad || 'No especificado',
@@ -258,11 +253,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         empresaDistribuidora: datosNotificacion.empresaDistribuidora || 'No especificado'
       });
       
-      // Usar redirección directa como en el método anterior que funcionaba
       const downloadUrl = `/api/notificacion-defectos?${params.toString()}`;
       window.location.href = downloadUrl;
-      
-      // Limpiar selección después de iniciar descarga
       setRegistrosSeleccionados(new Set());
     } catch (error) {
       console.error('Error al generar PDF de notificación:', error);

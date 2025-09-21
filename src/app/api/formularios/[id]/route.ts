@@ -277,10 +277,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   doc.font('Calibri-Bold').fontSize(11).fillColor('black').text('DIRECCIÓN: ', tableX + 6, y + rowH + 8, { continued: true })
   doc.font('Calibri').fontSize(11).fillColor('black').text((registro.direccion || '').toUpperCase(), { continued: false })
   
-  // Caja para unidad con etiqueta y dato
+  // Caja para N° DEPTO/CASA con etiqueta y dato
    doc.rect(tableX + tableW * 0.55, y + rowH, tableW * 0.2, rowH).stroke()
    doc.font('Calibri-Bold').fontSize(11).fillColor('black').text('UNIDAD: ', tableX + tableW * 0.55 + 6, y + rowH + 8, { continued: true })
-   doc.font('Calibri').fontSize(11).fillColor('black').text(registro.block || '', { continued: false })
+   doc.font('Calibri').fontSize(11).fillColor('black').text(registro.deptoCasa || '', { continued: false })
   
   // Caja para ciudad con etiqueta y dato
   doc.rect(tableX + tableW * 0.75, y + rowH, tableW * 0.25, rowH).stroke()
