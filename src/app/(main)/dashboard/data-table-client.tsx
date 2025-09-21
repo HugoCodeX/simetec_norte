@@ -28,7 +28,7 @@ import {
 } from "@/components/ui/pagination";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { format } from "date-fns";
+import { format, addDays } from "date-fns";
 import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, Loader2 } from "lucide-react";
 import RegistroModal from "@/components/RegistroModal";
 import PDFNotificacionModal, { NotificacionData } from "@/components/PDFNotificacionModal";
@@ -410,7 +410,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                           </Button>
                         </div>
                       </TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border">{format(new Date(registro.fecha), "dd/MM/yyyy")}</TableCell>
+                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border">{format(addDays(new Date(registro.fecha), 1), "dd/MM/yyyy")}</TableCell>
                       <TableCell className="h-16 px-6 py-4 border-r-2 border-border max-w-[220px] truncate" title={registro.direccion}>
                         {registro.direccion}
                       </TableCell>
