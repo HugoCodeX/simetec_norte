@@ -245,51 +245,31 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
       }
       
-      // Crear el PDF con el nuevo diseño usando los datos del modal
-      const response = await fetch('/api/notificacion-defectos', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          registros: registrosParaDescargar,
-          datosNotificacion,
-        }),
-      });
+      // Crear formulario temporal para envío POST que funciona en WebView
+      const form = document.createElement('form');
+      form.method = 'POST';
+      form.action = '/api/notificacion-defectos';
+      form.target = '_blank'; // Abrir en nueva pestaña para descarga
+      form.style.display = 'none';
       
-      if (!response.ok) {
-        throw new Error('Error al generar PDF de notificación');
-      }
+      // Agregar datos como campos ocultos
+      const registrosInput = document.createElement('input');
+      registrosInput.type = 'hidden';
+      registrosInput.name = 'registros';
+      registrosInput.value = JSON.stringify(registrosParaDescargar);
       
-      const blob = await response.blob();
-      const isWebView = isAndroidWebView();
+      const datosInput = document.createElement('input');
+      datosInput.type = 'hidden';
+      datosInput.name = 'datosNotificacion';
+      datosInput.value = JSON.stringify(datosNotificacion);
       
-      if (isWebView) {
-        // Para WebView de Android, usar el mismo método simple que funciona en descarga individual
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
-        link.style.display = 'none';
-        document.body.appendChild(link);
-        link.click();
-        
-        setTimeout(() => {
-          document.body.removeChild(link);
-          URL.revokeObjectURL(downloadUrl);
-        }, 100);
-      } else {
-        const downloadUrl = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = downloadUrl;
-        link.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(downloadUrl);
-      }
+      form.appendChild(registrosInput);
+      form.appendChild(datosInput);
+      document.body.appendChild(form);
+      form.submit();
+      document.body.removeChild(form);
       
-      // Limpiar selección después de descargar
+      // Limpiar selección después de iniciar descarga
       setRegistrosSeleccionados(new Set());
     } catch (error) {
       console.error('Error al generar PDF de notificación:', error);

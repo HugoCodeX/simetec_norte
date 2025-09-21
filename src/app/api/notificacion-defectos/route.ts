@@ -49,29 +49,38 @@ export async function POST(request: NextRequest) {
     let registros: Registro[];
     let datosNotificacion: NotificacionData;
 
-    // Manejar tanto JSON como form data con mejor logging
-    const contentType = request.headers.get('content-type');
-    console.log('Content-Type:', contentType)
+    // Verificar Content-Type para manejar tanto JSON como form data
+    const contentType = request.headers.get('content-type') || '';
     
-    if (contentType?.includes('application/json')) {
+    if (contentType.includes('application/json')) {
+      // Manejar datos JSON del body
       const data = await request.json();
       console.log('Datos recibidos via JSON')
       registros = data.registros;
       datosNotificacion = data.datosNotificacion;
-    } else {
-      // Manejar form data
-      console.log('Datos recibidos via FormData')
+    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
+      // Manejar datos de formulario
       const formData = await request.formData();
-      const registrosStr = formData.get('registros') as string;
-      const datosStr = formData.get('datosNotificacion') as string;
+      console.log('Datos recibidos via FormData')
       
-      if (!registrosStr || !datosStr) {
-        console.log('Error: Datos de formulario incompletos')
-        return new Response('Datos de formulario incompletos', { status: 400 });
+      const registrosStr = formData.get('registros') as string;
+      const datosNotificacionStr = formData.get('datosNotificacion') as string;
+      
+      if (!registrosStr || !datosNotificacionStr) {
+        console.log('Error: Faltan campos en el formulario')
+        return new Response('Faltan campos requeridos', { status: 400 })
       }
       
-      registros = JSON.parse(registrosStr);
-      datosNotificacion = JSON.parse(datosStr);
+      try {
+        registros = JSON.parse(registrosStr);
+        datosNotificacion = JSON.parse(datosNotificacionStr);
+      } catch (parseError) {
+        console.log('Error al parsear datos del formulario:', parseError)
+        return new Response('Error en formato de datos', { status: 400 })
+      }
+    } else {
+      console.log('Error: Content-Type no soportado:', contentType)
+      return new Response('Content-Type no soportado', { status: 400 })
     }
 
     if (!registros || registros.length === 0) {
