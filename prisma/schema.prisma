@@ -79,7 +79,7 @@ model Verification {
 }
 
 model Registro {
-  id                   String           @id @default(cuid())
+  id                   Int              @id @default(autoincrement())
   folio                String           @unique
   fecha                DateTime
   edificioCondominio   String?
@@ -108,7 +108,7 @@ model DefectoCritico {
   id                   String   @id @default(cuid())
   tipo                 String
   instalacionAfectada  String
-  registroId           String
+  registroId           Int
   registro             Registro @relation(fields: [registroId], references: [id], onDelete: Cascade)
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
