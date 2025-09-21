@@ -34,9 +34,9 @@ interface Registro {
   defectosCriticos: any[];
 }
 
-export async function POST(request: NextRequest) {
+export async function GET(request: NextRequest) {
   try {
-    console.log('=== INICIO GENERACIÓN PDF NOTIFICACIÓN ===')
+    console.log('=== INICIO GENERACIÓN PDF NOTIFICACIÓN (GET) ===')
     
     // Verificar autenticación usando auth.api.getSession como en formularios
     const session = await auth.api.getSession({ headers: request.headers })
@@ -46,49 +46,76 @@ export async function POST(request: NextRequest) {
       return new Response('No autorizado', { status: 401 })
     }
 
-    let registros: Registro[];
-    let datosNotificacion: NotificacionData;
-
-    // Verificar Content-Type para manejar tanto JSON como form data
-    const contentType = request.headers.get('content-type') || '';
+    // Obtener parámetros de la URL como en test.ts
+    const { searchParams } = new URL(request.url);
+    const idsParam = searchParams.get('ids');
     
-    if (contentType.includes('application/json')) {
-      // Manejar datos JSON del body
-      const data = await request.json();
-      console.log('Datos recibidos via JSON')
-      registros = data.registros;
-      datosNotificacion = data.datosNotificacion;
-    } else if (contentType.includes('application/x-www-form-urlencoded') || contentType.includes('multipart/form-data')) {
-      // Manejar datos de formulario
-      const formData = await request.formData();
-      console.log('Datos recibidos via FormData')
-      
-      const registrosStr = formData.get('registros') as string;
-      const datosNotificacionStr = formData.get('datosNotificacion') as string;
-      
-      if (!registrosStr || !datosNotificacionStr) {
-        console.log('Error: Faltan campos en el formulario')
-        return new Response('Faltan campos requeridos', { status: 400 })
-      }
-      
-      try {
-        registros = JSON.parse(registrosStr);
-        datosNotificacion = JSON.parse(datosNotificacionStr);
-      } catch (parseError) {
-        console.log('Error al parsear datos del formulario:', parseError)
-        return new Response('Error en formato de datos', { status: 400 })
-      }
-    } else {
-      console.log('Error: Content-Type no soportado:', contentType)
-      return new Response('Content-Type no soportado', { status: 400 })
+    console.log('Parámetro ids recibido:', idsParam);
+    
+    if (!idsParam) {
+      console.log('Error: IDs de formularios requeridos')
+      return new Response('IDs de formularios requeridos', { status: 400 })
     }
 
-    if (!registros || registros.length === 0) {
-      console.log('Error: No se proporcionaron registros')
-      return new Response('No se proporcionaron registros', { status: 400 });
+    const formularioIds = idsParam.split(',').map(id => id.trim()).filter(id => id.length > 0);
+    
+    console.log('IDs procesados:', formularioIds);
+    console.log('Cantidad de IDs:', formularioIds.length);
+    
+    if (formularioIds.length === 0) {
+      console.log('Error: IDs de formularios válidos requeridos')
+      return new Response('IDs de formularios válidos requeridos', { status: 400 })
+    }
+
+    // Obtener metadatos desde query parameters como en test.ts
+    const datosNotificacion = {
+      comunidad: searchParams.get('comunidad') || 'No especificado',
+      direccionComunidad: searchParams.get('direccion') || 'No especificado',
+      administrador: searchParams.get('administrador') || 'No especificado',
+      fechaNotificacion: searchParams.get('fechaNotificacion') || new Date().toISOString().slice(0, 10),
+      empresaDistribuidora: searchParams.get('empresaDistribuidora') || 'No especificado'
+    };
+
+    // Obtener registros de la base de datos usando los IDs
+    const registros = await prisma.registro.findMany({
+      where: { 
+        id: { in: formularioIds }
+      },
+      include: {
+        defectosCriticos: true
+      }
+    });
+
+    if (registros.length === 0) {
+      console.log('Error: No se encontraron registros')
+      return new Response('No se encontraron registros', { status: 404 })
     }
 
     console.log('Registros a procesar:', registros.length)
+
+    // Transformar los datos de la base de datos al formato esperado
+    const registrosTransformados = registros.map(registro => ({
+      id: registro.id,
+      folio: registro.folio || '',
+      fecha: registro.fecha,
+      edificioCondominio: registro.edificioCondominio,
+      direccion: registro.direccion,
+      deptoCasa: registro.deptoCasa,
+      block: registro.block,
+      ciudad: registro.ciudad,
+      administrador: registro.administrador,
+      empresaGas: registro.empresaGas,
+      nombre: registro.nombre,
+      rut: registro.rut,
+      telefono: registro.telefono,
+      email: registro.correoElectronico,
+      observaciones: '',
+      numeroMedidor: registro.numeroMedidor,
+      defectosCriticos: registro.defectosCriticos.map(defecto => ({
+        tipo: defecto.tipo,
+        instalacionAfectada: defecto.instalacionAfectada || 'Instalación'
+      }))
+    }));
 
     // Verificar que las fuentes existen antes de crear el documento
     const fontRegular = path.join(process.cwd(), 'public', 'fonts', 'CALIBRI.TTF');
@@ -312,7 +339,7 @@ export async function POST(request: NextRequest) {
       yPos += 25;
       
       // Dibujar filas de datos
-      registros.forEach((registro) => {
+      registrosTransformados.forEach((registro) => {
         // Consolidar todos los defectos críticos en una sola descripción numerada
          let defectoCompleto;
          if (registro.defectosCriticos && registro.defectosCriticos.length > 0) {
@@ -508,7 +535,7 @@ export async function POST(request: NextRequest) {
         'Pragma': 'no-cache',
         'Expires': '0',
         'Access-Control-Allow-Origin': '*',
-        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
         'Access-Control-Allow-Headers': 'Content-Type'
       },
     });

@@ -245,101 +245,22 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
       }
       
-      // Función para detectar si estamos en un WebView
-      const isWebView = () => {
-        const userAgent = navigator.userAgent;
-        return userAgent.includes('wv') || 
-               userAgent.includes('WebView') || 
-               (window as any).ReactNativeWebView !== undefined ||
-               !window.chrome ||
-               userAgent.includes('Version/') && userAgent.includes('Mobile');
-      };
-
-      // Función para descargar usando fetch (mejor para WebView)
-      const downloadWithFetch = async () => {
-        try {
-          const response = await fetch('/api/notificacion-defectos', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              registros: registrosParaDescargar,
-              datosNotificacion: datosNotificacion
-            })
-          });
-
-          if (!response.ok) {
-            throw new Error(`Error: ${response.status}`);
-          }
-
-          const blob = await response.blob();
-          const url = window.URL.createObjectURL(blob);
-          
-          // Intentar múltiples métodos para WebView
-          try {
-            // Método 1: Enlace temporal (más compatible)
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `notificacion_defectos_${new Date().toISOString().split('T')[0]}.pdf`;
-            a.style.display = 'none';
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-          } catch (linkError) {
-            console.log('Método de enlace falló, intentando window.open');
-            // Método 2: window.open como fallback
-            const newWindow = window.open(url, '_blank');
-            if (!newWindow) {
-              throw new Error('No se pudo abrir ventana para descarga');
-            }
-          }
-          
-          // Limpiar URL del blob después de un delay
-          setTimeout(() => {
-            window.URL.revokeObjectURL(url);
-          }, 1000);
-          
-        } catch (error) {
-          console.error('Error en descarga con fetch:', error);
-          // Fallback al método de formulario
-          downloadWithForm();
-        }
-      };
-
-      // Función para descargar usando formulario (fallback)
-      const downloadWithForm = () => {
-        const form = document.createElement('form');
-        form.method = 'POST';
-        form.action = '/api/notificacion-defectos';
-        form.target = '_blank';
-        form.style.display = 'none';
-        
-        const registrosInput = document.createElement('input');
-        registrosInput.type = 'hidden';
-        registrosInput.name = 'registros';
-        registrosInput.value = JSON.stringify(registrosParaDescargar);
-        
-        const datosInput = document.createElement('input');
-        datosInput.type = 'hidden';
-        datosInput.name = 'datosNotificacion';
-        datosInput.value = JSON.stringify(datosNotificacion);
-        
-        form.appendChild(registrosInput);
-        form.appendChild(datosInput);
-        document.body.appendChild(form);
-        form.submit();
-        document.body.removeChild(form);
-      };
-
-      // Usar el método apropiado según el entorno
-      if (isWebView()) {
-        console.log('Detectado WebView - usando fetch con blob');
-        await downloadWithFetch();
-      } else {
-        console.log('Detectado navegador normal - usando formulario');
-        downloadWithForm();
-      }
+      // Extraer IDs de los registros seleccionados
+      const registroIds = registrosParaDescargar.map(r => r.id).join(',');
+      
+      // Construir URL con parámetros simples como en el método anterior que funcionaba
+      const params = new URLSearchParams({
+        ids: registroIds,
+        comunidad: datosNotificacion.comunidad || 'No especificado',
+        direccion: datosNotificacion.direccionComunidad || 'No especificado', 
+        administrador: datosNotificacion.administrador || 'No especificado',
+        fechaNotificacion: datosNotificacion.fechaNotificacion || new Date().toISOString().slice(0, 10),
+        empresaDistribuidora: datosNotificacion.empresaDistribuidora || 'No especificado'
+      });
+      
+      // Usar redirección directa como en el método anterior que funcionaba
+      const downloadUrl = `/api/notificacion-defectos?${params.toString()}`;
+      window.location.href = downloadUrl;
       
       // Limpiar selección después de iniciar descarga
       setRegistrosSeleccionados(new Set());
