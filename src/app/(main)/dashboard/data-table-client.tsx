@@ -265,46 +265,19 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       const isWebView = isAndroidWebView();
       
       if (isWebView) {
-        // Para WebView de Android, usar el mismo patrón que funciona en descarga individual
-        try {
-          // Método 1: Crear un enlace temporal que simule una descarga directa
-          const tempForm = document.createElement('form');
-          tempForm.method = 'POST';
-          tempForm.action = '/api/notificacion-defectos';
-          tempForm.target = '_blank';
-          tempForm.style.display = 'none';
-          
-          // Agregar los datos como campos ocultos
-          const registrosInput = document.createElement('input');
-          registrosInput.type = 'hidden';
-          registrosInput.name = 'registros';
-          registrosInput.value = JSON.stringify(registrosParaDescargar);
-          
-          const datosInput = document.createElement('input');
-          datosInput.type = 'hidden';
-          datosInput.name = 'datosNotificacion';
-          datosInput.value = JSON.stringify(datosNotificacion);
-          
-          tempForm.appendChild(registrosInput);
-          tempForm.appendChild(datosInput);
-          document.body.appendChild(tempForm);
-          tempForm.submit();
-          document.body.removeChild(tempForm);
-        } catch (webViewError) {
-          // Método 2: Fallback con blob URL
-          const downloadUrl = URL.createObjectURL(blob);
-          const link = document.createElement('a');
-          link.href = downloadUrl;
-          link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
-          link.style.display = 'none';
-          document.body.appendChild(link);
-          link.click();
-          
-          setTimeout(() => {
-            document.body.removeChild(link);
-            URL.revokeObjectURL(downloadUrl);
-          }, 100);
-        }
+        // Para WebView de Android, usar el mismo método simple que funciona en descarga individual
+        const downloadUrl = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = `notificacion_defectos_${datosNotificacion.fechaNotificacion || new Date().toISOString().split('T')[0]}.pdf`;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        link.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(link);
+          URL.revokeObjectURL(downloadUrl);
+        }, 100);
       } else {
         const downloadUrl = URL.createObjectURL(blob);
         const link = document.createElement('a');
