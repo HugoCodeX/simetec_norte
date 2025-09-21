@@ -169,7 +169,7 @@ export async function obtenerRegistros() {
   }
 }
 
-export async function actualizarRegistro(id: string, data: RegistroData) {
+export async function actualizarRegistro(id: number, data: RegistroData) {
   try {
     const session = await getServerSession()
     
@@ -237,7 +237,7 @@ export async function actualizarRegistro(id: string, data: RegistroData) {
   }
 }
 
-export async function obtenerRegistroPorId(id: string) {
+export async function obtenerRegistroPorId(id: number) {
   try {
     const registro = await prisma.registro.findUnique({
       where: { id },

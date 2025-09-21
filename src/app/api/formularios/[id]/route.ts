@@ -26,7 +26,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return new Response('ID no proporcionado', { status: 400 })
   }
   
-  const formularioId = resolvedParams.id
+  const formularioId = parseInt(resolvedParams.id)
   console.log('ID del formulario:', formularioId)
 
   // No usar preview para forzar descarga en WebView

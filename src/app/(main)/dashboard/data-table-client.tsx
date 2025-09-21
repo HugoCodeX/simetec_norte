@@ -36,7 +36,7 @@ import { useState, useEffect } from "react";
 // Removida importación de generarPDFRegistro - ahora usamos API route
 
 interface Registro {
-  id: string;
+  id: number;
   folio: string;
   fecha: Date;
   edificioCondominio: string | null;
@@ -65,8 +65,8 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [registroParaEditar, setRegistroParaEditar] = useState<Registro | null>(null);
   const [modoEdicion, setModoEdicion] = useState(false);
-  const [descargandoPDF, setDescargandoPDF] = useState<string | null>(null);
-  const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<string>>(new Set());
+  const [descargandoPDF, setDescargandoPDF] = useState<number | null>(null);
+  const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<number>>(new Set());
   const [modalNotificacionOpen, setModalNotificacionOpen] = useState(false);
 
   // Filtrar registros basado en el término de búsqueda
@@ -118,7 +118,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   };
 
   // Funciones para manejar selección de registros
-  const handleSeleccionarRegistro = (registroId: string) => {
+  const handleSeleccionarRegistro = (registroId: number) => {
     const nuevosSeleccionados = new Set(registrosSeleccionados);
     if (nuevosSeleccionados.has(registroId)) {
       nuevosSeleccionados.delete(registroId);
@@ -229,7 +229,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   };
 
   const handleGenerarPDFNotificacion = async (datosNotificacion: NotificacionData) => {
-    setDescargandoPDF('multiple');
+    setDescargandoPDF(-1); // Usar -1 para indicar descarga múltiple
     
     try {
       const registrosParaDescargar = registros.filter(r => registrosSeleccionados.has(r.id));
@@ -309,10 +309,10 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 <Button
                   size="sm"
                   onClick={handleDescargarPDFsSeleccionados}
-                  disabled={descargandoPDF === 'multiple'}
+                  disabled={descargandoPDF === -1}
                   className="bg-blue-600 hover:bg-blue-700"
                 >
-                  {descargandoPDF === 'multiple' ? (
+                  {descargandoPDF === -1 ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Descargando...
@@ -474,7 +474,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         isOpen={modalNotificacionOpen}
         onClose={() => setModalNotificacionOpen(false)}
         onGenerate={handleGenerarPDFNotificacion}
-        registrosSeleccionados={Array.from(registrosSeleccionados)}
+        registrosSeleccionados={Array.from(registrosSeleccionados).map(String)}
       />
     </>
   );

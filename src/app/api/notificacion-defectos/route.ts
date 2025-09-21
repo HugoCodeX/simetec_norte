@@ -15,7 +15,7 @@ interface NotificacionData {
 }
 
 interface Registro {
-  id: string;
+  id: number;
   folio: string;
   fecha: Date;
   edificioCondominio: string | null;
@@ -57,7 +57,7 @@ export async function GET(request: NextRequest) {
       return new Response('IDs de formularios requeridos', { status: 400 })
     }
 
-    const formularioIds = idsParam.split(',').map(id => id.trim()).filter(id => id.length > 0);
+    const formularioIds = idsParam.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
     
     console.log('IDs procesados:', formularioIds);
     console.log('Cantidad de IDs:', formularioIds.length);
