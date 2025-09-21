@@ -83,9 +83,9 @@ export function SignUpForm() {
   return (
     <Card className="w-full max-w-md">
       <CardHeader>
-        <CardTitle className="text-lg md:text-xl">Sign Up</CardTitle>
+        <CardTitle className="text-lg md:text-xl">Registrarse</CardTitle>
         <CardDescription className="text-xs md:text-sm">
-          Enter your information to create an account
+          Ingrese su información para crear una cuenta
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -114,7 +114,7 @@ export function SignUpForm() {
                   <FormControl>
                     <Input
                       type="email"
-                      placeholder="your@email.com"
+                      placeholder="ejemplo@simetecsur.cl"
                       {...field}
                     />
                   </FormControl>
@@ -128,11 +128,11 @@ export function SignUpForm() {
               name="password"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Password</FormLabel>
+                  <FormLabel>Contraseña</FormLabel>
                   <FormControl>
                     <PasswordInput
                       autoComplete="new-password"
-                      placeholder="Password"
+                      placeholder="contrasena"
                       {...field}
                     />
                   </FormControl>
@@ -146,11 +146,11 @@ export function SignUpForm() {
               name="passwordConfirmation"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Confirm Password</FormLabel>
+                  <FormLabel>Confirmar contraseña</FormLabel>
                   <FormControl>
                     <PasswordInput
                       autoComplete="new-password"
-                      placeholder="Confirm password"
+                      placeholder="Confirmar contraseña"
                       {...field}
                     />
                   </FormControl>
@@ -166,7 +166,7 @@ export function SignUpForm() {
             )}
 
             <LoadingButton type="submit" className="w-full" loading={loading}>
-              Create an account
+              Crear cuenta
             </LoadingButton>
           </form>
         </Form>
