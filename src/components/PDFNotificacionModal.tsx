@@ -35,14 +35,13 @@ export interface NotificacionData {
 }
 
 const empresasDistribuidoras = [
-  'CGE Distribución S.A.',
-  'Chilectra S.A.',
-  'Enel Distribución Chile S.A.',
-  'Saesa S.A.',
-  'Frontel S.A.',
-  'Lipigas S.A.',
-  'Metrogas S.A.',
-  'Gasco S.A.',
+  'Metrogas',
+  'Lipigas',
+  'Gasco',
+  'Abastible.',
+  'Intergas',
+  'GasSur',
+  'Equipo GLP',
 ];
 
 export default function PDFNotificacionModal({
