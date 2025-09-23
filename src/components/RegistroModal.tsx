@@ -392,7 +392,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:mx-4">
         <DialogHeader>
           <DialogTitle>
             {modoEdicion ? 'Editar Registro' : 'Agregar Nuevo Registro'}
@@ -733,26 +733,26 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
             
             {defectosCriticos.map((defecto, index) => (
               <Card key={defecto.id} className="mb-3">
-                <CardContent className="p-4">
+                <CardContent className="p-3 sm:p-4">
                   <div className="flex items-center justify-between mb-3">
                     <h4 className="text-sm font-medium">Defecto #{index + 1}</h4>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => eliminarDefectoCritico(defecto.id)}
-                      className="text-red-500 hover:text-red-700"
+                      className="text-red-500 hover:text-red-700 h-8 w-8 p-0"
                     >
                       <TrashIcon className="h-4 w-4" />
                     </Button>
                   </div>
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     <div>
-                      <Label className="mb-2 block">Tipo de Defecto</Label>
+                      <Label className="mb-2 block text-sm">Tipo de Defecto</Label>
                       <Select 
                         value={getCodigoFromTexto(defecto.tipo)} 
                         onValueChange={(value) => actualizarDefectoCritico(defecto.id, 'tipo', value)}
                       >
-                        <SelectTrigger className="bg-white rounded-sm">
+                        <SelectTrigger className="bg-white rounded-sm h-10">
                           <SelectValue placeholder="Seleccione defecto" />
                         </SelectTrigger>
                         <SelectContent>
@@ -777,12 +777,22 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                       </Select>
                     </div>
                     <div>
-                      <Label className="mb-2 block">Instalación Afectada</Label>
+                      <Label className="mb-2 block text-sm">Instalación Afectada</Label>
                       <Input
                         value={defecto.instalacionAfectada}
                         onChange={(e) => actualizarDefectoCritico(defecto.id, 'instalacionAfectada', e.target.value)}
+                        onFocus={(e) => {
+                          // Scroll automático en dispositivos móviles
+                          setTimeout(() => {
+                            e.target.scrollIntoView({ 
+                              behavior: 'smooth', 
+                              block: 'center',
+                              inline: 'nearest'
+                            })
+                          }, 300) // Delay para permitir que el teclado virtual se abra
+                        }}
                         placeholder="Descripción de la instalación afectada"
-                        className="bg-white rounded-sm"
+                        className="bg-white rounded-sm h-10"
                       />
                     </div>
                   </div>
