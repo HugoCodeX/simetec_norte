@@ -392,7 +392,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:mx-4">
+      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:mx-4 lg:max-w-xl xl:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
             {modoEdicion ? 'Editar Registro' : 'Agregar Nuevo Registro'}
@@ -405,11 +405,11 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6">
           {/* Información General */}
           <div>
             <h3 className="text-sm font-medium text-gray-700 mb-3">Información General</h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label htmlFor="folio" className="mb-2 block">Folio</Label>
                 <Input
@@ -472,7 +472,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                   </p>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="deptoCasa" className="mb-2 block">Depto/Casa</Label>
                   <Input
@@ -803,17 +803,18 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
         </div>
 
         {/* Botones de acción */}
-        <div className="flex justify-end space-x-2 pt-4 border-t">
+        <div className="flex flex-col sm:flex-row justify-end gap-2 sm:space-x-2 pt-4 border-t">
           <Button 
             variant="outline" 
             onClick={handleCancelar}
             disabled={isSubmitting}
+            className="w-full sm:w-auto"
           >
             Cancelar
           </Button>
           <Button 
             onClick={handleGuardarRegistro} 
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 w-full sm:w-auto"
             disabled={isSubmitting}
           >
             {isSubmitting 
