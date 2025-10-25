@@ -5,29 +5,16 @@ import { getServerSession } from "@/lib/get-session"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 
-// Esquema de validación para presupuestos
-const presupuestoSchema = z.object({
+// Esquema de validación para agregar dinero
+const agregarDineroSchema = z.object({
   userId: z.string().min(1, "El usuario es requerido"),
-  montoAsignado: z.number().positive("El monto debe ser positivo"),
-  periodo: z.string().min(1, "La fecha del período es requerida"),
+  dinero: z.number().min(0, "El dinero debe ser positivo o cero"),
 })
 
-type PresupuestoInput = z.infer<typeof presupuestoSchema>
+type AgregarDineroInput = z.infer<typeof agregarDineroSchema>
 
-// Función helper para obtener período actual (año-mes de una fecha)
-function obtenerPeriodoDesFecha(fecha: Date): string {
-  const año = fecha.getFullYear()
-  const mes = String(fecha.getMonth() + 1).padStart(2, '0')
-  return `${año}-${mes}`
-}
-
-// Función helper para obtener período actual
-function obtenerPeriodoActual(): string {
-  return obtenerPeriodoDesFecha(new Date())
-}
-
-// Función para obtener todos los presupuestos (solo admin)
-export async function obtenerPresupuestos() {
+// Función para obtener todos los usuarios con su dinero (solo admin)
+export async function obtenerUsuariosConDinero() {
   try {
     const session = await getServerSession()
     
@@ -38,27 +25,28 @@ export async function obtenerPresupuestos() {
       }
     }
 
-    const presupuestos = await prisma.presupuesto.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        }
+    const usuarios = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        dinero: true,
+        emailVerified: true,
+        createdAt: true,
+        updatedAt: true
       },
       orderBy: {
-        createdAt: 'desc'
+        name: 'asc'
       }
     })
-    
+
     return {
       success: true,
-      data: presupuestos
+      data: usuarios
     }
   } catch (error) {
-    console.error("Error al obtener presupuestos:", error)
+    console.error('Error al obtener usuarios:', error)
     return {
       success: false,
       error: "Error interno del servidor"
@@ -66,63 +54,8 @@ export async function obtenerPresupuestos() {
   }
 }
 
-// Función para obtener presupuesto de un usuario específico
-export async function obtenerPresupuestoUsuario(userId?: string) {
-  try {
-    const session = await getServerSession()
-    
-    if (!session?.user) {
-      return {
-        success: false,
-        error: "No autorizado"
-      }
-    }
-
-    // Si no se especifica userId, usar el del usuario actual
-    const targetUserId = userId || session.user.id
-
-    // Solo admin puede ver presupuestos de otros usuarios
-    if (session.user.role !== 'admin' && targetUserId !== session.user.id) {
-      return {
-        success: false,
-        error: "No autorizado"
-      }
-    }
-
-    // Obtener presupuesto del período actual
-    const periodoActual = obtenerPeriodoActual()
-    
-    const presupuesto = await prisma.presupuesto.findFirst({
-      where: { 
-        userId: targetUserId,
-        periodo: periodoActual,
-        activo: true
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true
-          }
-        }
-      }
-    })
-    
-    return {
-      success: true,
-      data: presupuesto
-    }
-  } catch (error) {
-    console.error("Error al obtener presupuesto del usuario:", error)
-    return {
-      success: false,
-      error: "Error interno del servidor"
-    }
-  }
-}
-
-// Función para crear o actualizar presupuesto (solo admin)
-export async function asignarPresupuesto(data: PresupuestoInput) {
+// Función para agregar dinero a un usuario (solo admin)
+export async function agregarDineroUsuario(data: AgregarDineroInput) {
   try {
     const session = await getServerSession()
     
@@ -134,11 +67,17 @@ export async function asignarPresupuesto(data: PresupuestoInput) {
     }
 
     // Validar datos
-    const validatedData = presupuestoSchema.parse(data)
+    const validatedData = agregarDineroSchema.parse(data)
 
     // Verificar que el usuario existe
     const usuario = await prisma.user.findUnique({
-      where: { id: validatedData.userId }
+      where: { id: validatedData.userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dinero: true
+      }
     })
 
     if (!usuario) {
@@ -148,69 +87,32 @@ export async function asignarPresupuesto(data: PresupuestoInput) {
       }
     }
 
-    // Convertir fecha a período (YYYY-MM)
-    const fechaPeriodo = new Date(validatedData.periodo)
-    const periodoCalculado = obtenerPeriodoDesFecha(fechaPeriodo)
-
-    // Verificar si ya existe un presupuesto para este usuario y período
-    const presupuestoExistente = await prisma.presupuesto.findFirst({
-      where: {
-        userId: validatedData.userId,
-        periodo: periodoCalculado,
-        activo: true
+    // Actualizar dinero del usuario
+    const usuarioActualizado = await prisma.user.update({
+      where: { id: validatedData.userId },
+      data: {
+        dinero: {
+          increment: validatedData.dinero
+        }
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dinero: true
       }
     })
-
-    let presupuesto
-    if (presupuestoExistente) {
-      // Actualizar presupuesto existente
-      presupuesto = await prisma.presupuesto.update({
-        where: { id: presupuestoExistente.id },
-        data: {
-          montoAsignado: validatedData.montoAsignado,
-          montoDisponible: validatedData.montoAsignado - presupuestoExistente.montoUtilizado,
-          updatedAt: new Date()
-        },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true
-            }
-          }
-        }
-      })
-    } else {
-      // Crear nuevo presupuesto
-      presupuesto = await prisma.presupuesto.create({
-        data: {
-          userId: validatedData.userId,
-          montoAsignado: validatedData.montoAsignado,
-          montoUtilizado: 0,
-          montoDisponible: validatedData.montoAsignado,
-          periodo: periodoCalculado,
-          createdBy: session.user.id
-        },
-        include: {
-          user: {
-            select: {
-              name: true,
-              email: true
-            }
-          }
-        }
-      })
-    }
 
     revalidatePath('/presupuestos')
     revalidatePath('/gastos')
     
     return {
       success: true,
-      data: presupuesto
+      data: usuarioActualizado,
+      message: `Se agregaron $${validatedData.dinero.toLocaleString()} a la cuenta de ${usuario.name}`
     }
   } catch (error) {
-    console.error('Error al asignar presupuesto:', error)
+    console.error('Error al agregar dinero:', error)
     if (error instanceof Error) {
       return {
         success: false,
@@ -224,42 +126,8 @@ export async function asignarPresupuesto(data: PresupuestoInput) {
   }
 }
 
-// Función para actualizar monto utilizado (llamada internamente al crear gastos)
-export async function actualizarMontoUtilizado(userId: string, montoGasto: number) {
-  try {
-    // Obtener período actual
-    const periodoActual = obtenerPeriodoActual()
-    
-    const presupuesto = await prisma.presupuesto.findFirst({
-      where: {
-        userId: userId,
-        periodo: periodoActual,
-        activo: true
-      }
-    })
-
-    if (presupuesto) {
-      const nuevoMontoUtilizado = presupuesto.montoUtilizado + montoGasto
-      const nuevoMontoDisponible = presupuesto.montoAsignado - nuevoMontoUtilizado
-
-      await prisma.presupuesto.update({
-        where: { id: presupuesto.id },
-        data: {
-          montoUtilizado: nuevoMontoUtilizado,
-          montoDisponible: nuevoMontoDisponible
-        }
-      })
-    }
-
-    return { success: true }
-  } catch (error) {
-    console.error('Error al actualizar monto utilizado:', error)
-    return { success: false }
-  }
-}
-
-// Función para obtener usuarios sin presupuesto activo para el período actual
-export async function obtenerUsuariosSinPresupuesto() {
+// Función para establecer dinero específico a un usuario (solo admin)
+export async function establecerDineroUsuario(userId: string, dinero: number) {
   try {
     const session = await getServerSession()
     
@@ -270,54 +138,55 @@ export async function obtenerUsuariosSinPresupuesto() {
       }
     }
 
-    // Obtener período actual
-    const periodoActual = obtenerPeriodoActual()
+    if (dinero < 0) {
+      return {
+        success: false,
+        error: "El dinero no puede ser negativo"
+      }
+    }
 
-    // Obtener usuarios que no tienen presupuesto activo para el período actual
-    const usuarios = await prisma.user.findMany({
-      where: {
-        OR: [
-          { presupuesto: null },
-          {
-            presupuesto: {
-              OR: [
-                { periodo: { not: periodoActual } },
-                { activo: false }
-              ]
-            }
-          }
-        ]
+    // Verificar que el usuario existe
+    const usuario = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dinero: true
+      }
+    })
+
+    if (!usuario) {
+      return {
+        success: false,
+        error: "Usuario no encontrado"
+      }
+    }
+
+    // Establecer dinero del usuario
+    const usuarioActualizado = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        dinero: dinero
       },
       select: {
         id: true,
         name: true,
         email: true,
-        presupuesto: {
-          select: {
-            periodo: true,
-            activo: true
-          }
-        }
+        dinero: true
       }
     })
 
-    // Filtrar usuarios que realmente no tienen presupuesto para el período actual
-    const usuariosSinPresupuesto = usuarios.filter(usuario => 
-      !usuario.presupuesto || 
-      usuario.presupuesto.periodo !== periodoActual || 
-      !usuario.presupuesto.activo
-    ).map(usuario => ({
-      id: usuario.id,
-      name: usuario.name,
-      email: usuario.email
-    }))
+    revalidatePath('/presupuestos')
+    revalidatePath('/gastos')
     
     return {
       success: true,
-      data: usuariosSinPresupuesto
+      data: usuarioActualizado,
+      message: `Se estableció $${dinero.toLocaleString()} en la cuenta de ${usuario.name}`
     }
   } catch (error) {
-    console.error("Error al obtener usuarios sin presupuesto:", error)
+    console.error('Error al establecer dinero:', error)
     return {
       success: false,
       error: "Error interno del servidor"

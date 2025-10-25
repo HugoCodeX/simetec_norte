@@ -4,8 +4,7 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "@/lib/get-session"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
-import { uploadImage, deleteImage } from "@/lib/blob-storage"
-import { actualizarMontoUtilizado } from "./presupuestos"
+
 
 // Esquema de validación para gastos
 const gastoSchema = z.object({
@@ -13,7 +12,7 @@ const gastoSchema = z.object({
   fecha: z.date(),
   item: z.string().min(1, "El item es requerido"),
   descripcion: z.string().optional(),
-  monto: z.number().positive("El monto debe ser positivo"),
+  monto: z.number(), // Permitir montos negativos y positivos
   archivo: z.string().optional(),
 })
 
@@ -45,25 +44,16 @@ export async function obtenerGastos() {
         user: {
           select: {
             name: true,
-            email: true,
-            presupuesto: session.user.role === 'admin' ? {
-              select: {
-                montoAsignado: true,
-                montoUtilizado: true,
-                montoDisponible: true,
-                periodo: true
-              }
-            } : false
+            email: true
           }
         }
       }
     })
 
-    // Transformar los datos para incluir el nombre del usuario y presupuesto
+    // Transformar los datos para incluir el nombre del usuario
     const gastosTransformados = gastos.map(gasto => ({
       ...gasto,
-      usuario: gasto.user.name || gasto.user.email,
-      presupuesto: session.user.role === 'admin' ? gasto.user.presupuesto : undefined
+      usuario: gasto.user.name || gasto.user.email
     }))
 
     return {
@@ -101,93 +91,107 @@ export async function crearGasto(formData: FormData) {
       archivo: undefined as string | undefined
     }
 
-    // Manejar archivo si existe
+    // Manejar archivo si existe - convertir a base64
     const file = formData.get('archivo') as File | null
     if (file && file.size > 0) {
       try {
-        data.archivo = await uploadImage(file, 'gastos')
+        // Validar tipo de archivo
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+          return {
+            success: false,
+            error: 'Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PNG.'
+          }
+        }
+
+        // Validar tamaño (50MB máximo)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+          return {
+            success: false,
+            error: 'El archivo es demasiado grande. Máximo 50MB.'
+          }
+        }
+
+        // Convertir archivo a base64
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
+        data.archivo = base64
       } catch (uploadError) {
         return {
           success: false,
-          error: uploadError instanceof Error ? uploadError.message : "Error al subir la imagen"
+          error: uploadError instanceof Error ? uploadError.message : "Error al procesar la imagen"
         }
       }
     }
 
     // Validar datos
+    console.log(`[DEBUG] Datos a validar:`, data)
     const validatedData = gastoSchema.parse(data)
+    console.log(`[DEBUG] Datos validados exitosamente:`, validatedData)
 
-    // Verificar presupuesto disponible (solo para usuarios no admin)
-    if (session.user.role !== 'admin') {
-      // Obtener período actual
-      const ahora = new Date()
-      const periodoActual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`
+    // Usar transacción para asegurar consistencia
+    console.log(`[DEBUG] Iniciando transacción para crear gasto`)
+    const result = await prisma.$transaction(async (tx) => {
+      console.log(`[DEBUG] Dentro de la transacción`)
       
-      const presupuesto = await prisma.presupuesto.findFirst({
-        where: {
-          userId: session.user.id,
-          periodo: periodoActual,
-          activo: true
-        }
+      // Obtener información del usuario antes de la transacción
+      const usuarioAntes = await tx.user.findUnique({
+        where: { id: session.user.id },
+        select: { dinero: true, name: true }
       })
+      
+      console.log(`[DEBUG] Usuario ${usuarioAntes?.name} - Dinero antes: ${usuarioAntes?.dinero}, Gasto: ${validatedData.monto}`)
 
-      if (!presupuesto) {
-        return {
-          success: false,
-          error: `No tienes un presupuesto asignado para el período actual (${periodoActual}). Contacta al administrador.`
-        }
-      }
-
-      if (presupuesto.montoDisponible < validatedData.monto) {
-        return {
-          success: false,
-          error: `Presupuesto insuficiente para ${periodoActual}. Disponible: $${presupuesto.montoDisponible.toLocaleString()}, Solicitado: $${validatedData.monto.toLocaleString()}`
-        }
-      }
-    }
-
-    // Verificar que el folio sea único
-    const existingGasto = await prisma.gasto.findUnique({
-      where: { folio: validatedData.folio }
-    })
-
-    if (existingGasto) {
-      return {
-        success: false,
-        error: "Ya existe un gasto con este folio"
-      }
-    }
-
-    const gasto = await prisma.gasto.create({
-      data: {
-        folio: validatedData.folio,
-        fecha: validatedData.fecha,
-        item: validatedData.item,
-        descripcion: validatedData.descripcion || null,
-        monto: validatedData.monto,
-        archivo: validatedData.archivo || null,
-        userId: session.user.id
-      },
-      include: {
-        user: {
-          select: {
-            name: true,
-            email: true
+      // Crear el gasto
+      console.log(`[DEBUG] Creando gasto en la base de datos`)
+      const gasto = await tx.gasto.create({
+        data: {
+          folio: validatedData.folio,
+          fecha: validatedData.fecha,
+          item: validatedData.item,
+          descripcion: validatedData.descripcion || null,
+          monto: validatedData.monto,
+          archivo: validatedData.archivo || null,
+          userId: session.user.id
+        },
+        include: {
+          user: {
+            select: {
+              name: true,
+              email: true
+            }
           }
         }
-      }
-    })
+      })
+      console.log(`[DEBUG] Gasto creado con ID: ${gasto.id}`)
 
-    // Actualizar presupuesto si no es admin
-    if (session.user.role !== 'admin') {
-      await actualizarMontoUtilizado(session.user.id, validatedData.monto)
-    }
+      // Descontar dinero del usuario (aplica para todos los usuarios, incluyendo admins)
+      console.log(`[DEBUG] Actualizando dinero del usuario (rol: ${session.user.role})`)
+      const usuarioActualizado = await tx.user.update({
+        where: { id: session.user.id },
+        data: {
+          dinero: {
+            decrement: validatedData.monto
+          }
+        },
+        select: { dinero: true, name: true }
+      })
+      
+      console.log(`[DEBUG] Usuario ${usuarioActualizado.name} - Dinero después: ${usuarioActualizado.dinero}`)
+
+      console.log(`[DEBUG] Transacción completada exitosamente`)
+      return gasto
+    })
+    
+    console.log(`[DEBUG] Transacción finalizada, resultado:`, result.id)
 
     revalidatePath('/gastos')
 
     return {
       success: true,
-      data: gasto
+      data: result
     }
   } catch (error) {
     console.error('Error al crear gasto:', error)
@@ -246,24 +250,37 @@ export async function actualizarGasto(id: string, formData: FormData) {
       archivo: gastoExistente.archivo // Mantener archivo existente por defecto
     }
 
-    // Manejar nuevo archivo si existe
+    // Manejar nuevo archivo si existe - convertir a base64
     const file = formData.get('archivo') as File | null
     if (file && file.size > 0) {
       try {
-        // Subir nuevo archivo primero
-        const nuevaUrl = await uploadImage(file, 'gastos')
-        
-        // Solo eliminar archivo anterior después de subir el nuevo exitosamente
-        if (gastoExistente.archivo) {
-          // Eliminar en background para no bloquear la respuesta
-          deleteImage(gastoExistente.archivo).catch(console.error)
+        // Validar tipo de archivo
+        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+        if (!allowedTypes.includes(file.type)) {
+          return {
+            success: false,
+            error: 'Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PNG.'
+          }
         }
-        
-        data.archivo = nuevaUrl
+
+        // Validar tamaño (50MB máximo)
+        const maxSize = 50 * 1024 * 1024; // 50MB
+        if (file.size > maxSize) {
+          return {
+            success: false,
+            error: 'El archivo es demasiado grande. Máximo 50MB.'
+          }
+        }
+
+        // Convertir archivo a base64
+        const arrayBuffer = await file.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
+        const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
+        data.archivo = base64
       } catch (uploadError) {
         return {
           success: false,
-          error: uploadError instanceof Error ? uploadError.message : "Error al subir la imagen"
+          error: uploadError instanceof Error ? uploadError.message : "Error al procesar la imagen"
         }
       }
     }
@@ -351,15 +368,12 @@ export async function eliminarGasto(id: string) {
       }
     }
 
-    // Eliminar gasto de la base de datos primero
+    // Eliminar gasto de la base de datos
     await prisma.gasto.delete({
       where: { id }
     })
 
-    // Eliminar archivo en background para no bloquear la respuesta
-    if (gastoExistente.archivo) {
-      deleteImage(gastoExistente.archivo).catch(console.error)
-    }
+    // Nota: Con base64, no necesitamos eliminar archivos externos
 
     revalidatePath("/gastos")
 

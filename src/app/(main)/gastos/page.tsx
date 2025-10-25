@@ -1,37 +1,9 @@
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { Input } from "@/components/ui/input";
 import { getServerSession } from "@/lib/get-session";
-import { format } from "date-fns";
-import { DollarSignIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, FileIcon } from "lucide-react";
-import Link from "next/link";
 import { unauthorized } from "next/navigation";
 import { DataTableClient } from "./data-table-client";
 import { obtenerGastos } from "@/app/actions/gastos";
+import { obtenerDatosUsuario } from "@/app/actions/usuario";
+import { DineroCard } from "@/components/DineroCard";
 
 export default async function GastosPage() {
   const session = await getServerSession();
@@ -39,14 +11,28 @@ export default async function GastosPage() {
 
   if (!user) unauthorized();
 
-  const result = await obtenerGastos();
+  const [gastosResult, usuarioResult] = await Promise.all([
+    obtenerGastos(),
+    obtenerDatosUsuario()
+  ]);
   
-  // Manejar el caso de error
-  if (!result.success) {
+  // Manejar el caso de error en gastos
+  if (!gastosResult.success) {
     return (
       <main className="mx-auto w-full max-w-7xl px-4 py-12">
         <div className="text-center py-12">
-          <p className="text-red-500">Error al cargar los gastos: {result.error}</p>
+          <p className="text-red-500">Error al cargar los gastos: {gastosResult.error}</p>
+        </div>
+      </main>
+    );
+  }
+
+  // Manejar el caso de error en datos del usuario
+  if (!usuarioResult.success) {
+    return (
+      <main className="mx-auto w-full max-w-7xl px-4 py-12">
+        <div className="text-center py-12">
+          <p className="text-red-500">Error al cargar los datos del usuario: {usuarioResult.error}</p>
         </div>
       </main>
     );
@@ -55,8 +41,14 @@ export default async function GastosPage() {
   return (
     <main className="mx-auto w-full max-w-7xl px-4 py-12">
       <div className="space-y-6">
+        {/* Card de dinero del usuario */}
+        <DineroCard 
+          dinero={usuarioResult.data?.dinero || 0} 
+          nombre={usuarioResult.data?.name || 'Usuario'} 
+        />
+        
         <DataTableClient 
-          gastos={result.data || []} 
+          gastos={gastosResult.data || []} 
           currentUser={{
             name: user.name || '',
             email: user.email || '',

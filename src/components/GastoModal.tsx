@@ -15,8 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CalendarIcon, AlertCircleIcon, UploadIcon, XIcon } from "lucide-react"
 import { toast } from "sonner"
-import { crearGasto, actualizarGasto } from "@/app/actions/gastos"
-import { obtenerPresupuestoUsuario } from "@/app/actions/presupuestos"
+import { crearGasto } from "@/app/actions/gastos"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 
@@ -54,7 +53,6 @@ const ITEMS_GASTOS = [
 interface GastoModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  gasto?: Gasto
   onSuccess: () => void
   currentUser?: {
     name: string
@@ -82,11 +80,9 @@ interface FormErrors {
 export default function GastoModal({
   open,
   onOpenChange,
-  gasto = undefined,
   currentUser,
   onSuccess
 }: GastoModalProps) {
-  const modoEdicion = !!gasto
   const [formData, setFormData] = useState<FormData>({
     folio: '',
     fecha: format(new Date(), 'yyyy-MM-dd'),
@@ -99,54 +95,22 @@ export default function GastoModal({
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
-  const [presupuesto, setPresupuesto] = useState<any>(null)
 
-  // Efecto para cargar datos cuando se edita o limpiar cuando se crea
+  // Efecto para limpiar formulario cuando se abre el modal
   useEffect(() => {
     if (open) {
-      if (modoEdicion && gasto) {
-        setFormData({
-          folio: gasto.folio,
-          fecha: format(new Date(gasto.fecha), 'yyyy-MM-dd'),
-          item: gasto.item,
-          descripcion: gasto.descripcion || '',
-          monto: gasto.monto.toString(),
-          archivo: gasto.archivo || ''
-        })
-      } else {
-        // Modo creación: limpiar formulario completamente
-        const nuevoFolio = `G-${Date.now().toString().slice(-6)}`
-        setFormData({
-          folio: nuevoFolio,
-          fecha: format(new Date(), 'yyyy-MM-dd'),
-          item: '',
-          descripcion: '',
-          monto: '',
-          archivo: ''
-        })
-      }
+      setFormData({
+        folio: '', // Folio en blanco para que el usuario lo ingrese
+        fecha: format(new Date(), 'yyyy-MM-dd'),
+        item: '',
+        descripcion: '',
+        monto: '',
+        archivo: ''
+      })
       setErrors({})
       setSelectedFile(null)
     }
-  }, [modoEdicion, gasto, open])
-
-  // Cargar presupuesto del usuario
-  useEffect(() => {
-    if (open && currentUser) {
-      cargarPresupuesto()
-    }
-  }, [open, currentUser])
-
-  const cargarPresupuesto = async () => {
-    try {
-      const result = await obtenerPresupuestoUsuario()
-      if (result.success) {
-        setPresupuesto(result.data)
-      }
-    } catch (error) {
-      console.error('Error al cargar presupuesto:', error)
-    }
-  }
+  }, [open])
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {}
@@ -167,9 +131,10 @@ export default function GastoModal({
       newErrors.monto = 'El monto es requerido'
     } else {
       const monto = parseFloat(formData.monto)
-      if (isNaN(monto) || monto <= 0) {
-        newErrors.monto = 'El monto debe ser un número positivo'
+      if (isNaN(monto)) {
+        newErrors.monto = 'El monto debe ser un número válido'
       }
+      // Permitir montos negativos y positivos
     }
 
     setErrors(newErrors)
@@ -215,23 +180,14 @@ export default function GastoModal({
         formDataToSend.append('archivo', selectedFile)
       }
 
-      let result
-      if (modoEdicion && gasto) {
-        result = await actualizarGasto(gasto.id, formDataToSend)
-      } else {
-        result = await crearGasto(formDataToSend)
-      }
+      const result = await crearGasto(formDataToSend)
 
       if (result.success) {
-        toast.success(
-          modoEdicion
-            ? 'Gasto actualizado correctamente'
-            : 'Gasto creado correctamente'
-        )
+        toast.success('Gasto creado correctamente')
         onSuccess()
         onOpenChange(false)
       } else {
-        toast.error(result.error || 'Error al procesar el gasto')
+        toast.error(result.error || 'Error al crear el gasto')
       }
     } catch (error) {
       console.error('Error al enviar formulario:', error)
@@ -256,8 +212,8 @@ export default function GastoModal({
   }
 
   const formatearMonto = (value: string) => {
-    // Remover caracteres no numéricos excepto punto y coma
-    const numericValue = value.replace(/[^0-9.,]/g, '')
+    // Permitir números negativos, punto y coma
+    const numericValue = value.replace(/[^0-9.,-]/g, '')
     return numericValue
   }
 
@@ -266,12 +222,10 @@ export default function GastoModal({
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            {modoEdicion ? 'Editar Gasto' : 'Crear Nuevo Gasto'}
+            Crear Nuevo Gasto
           </DialogTitle>
           <DialogDescription>
-            {modoEdicion
-              ? 'Modifica los datos del gasto seleccionado.'
-              : 'Completa la información para registrar un nuevo gasto.'}
+            Completa la información para registrar un nuevo gasto.
           </DialogDescription>
         </DialogHeader>
 
@@ -367,28 +321,6 @@ export default function GastoModal({
               />
             </div>
 
-            {/* Mostrar presupuesto si existe */}
-            {presupuesto && (
-              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                <h4 className="font-medium text-blue-900 mb-2">Presupuesto Disponible</h4>
-                <div className="grid grid-cols-3 gap-4 text-sm">
-                  <div>
-                    <span className="text-blue-600">Asignado:</span>
-                    <p className="font-medium">${presupuesto.montoAsignado.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-blue-600">Utilizado:</span>
-                    <p className="font-medium">${presupuesto.montoUtilizado.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <span className="text-blue-600">Disponible:</span>
-                    <p className={`font-medium ${presupuesto.montoDisponible < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      ${presupuesto.montoDisponible.toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Monto */}
@@ -428,7 +360,7 @@ export default function GastoModal({
                   <label htmlFor="archivo" className="cursor-pointer">
                     <UploadIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <p className="text-gray-600 font-medium mb-2">Haz clic para subir una imagen</p>
-                    <p className="text-sm text-gray-500">PNG, JPG hasta 5MB</p>
+                    <p className="text-sm text-gray-500">PNG, JPG hasta 50MB</p>
                   </label>
                 </div>
               ) : (
@@ -479,12 +411,7 @@ export default function GastoModal({
               disabled={isSubmitting}
               className="min-w-[120px]"
             >
-              {isSubmitting
-                ? 'Procesando...'
-                : modoEdicion
-                  ? 'Actualizar'
-                  : 'Crear Gasto'
-              }
+              {isSubmitting ? 'Creando...' : 'Crear Gasto'}
             </Button>
           </div>
         </form>

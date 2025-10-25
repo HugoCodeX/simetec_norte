@@ -12,87 +12,54 @@ import {
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertCircleIcon } from "lucide-react"
-import { format } from "date-fns"
+import { AlertCircleIcon, WalletIcon } from "lucide-react"
 import { toast } from "sonner"
-import { asignarPresupuesto, obtenerUsuariosSinPresupuesto } from "@/app/actions/presupuestos"
+import { agregarDineroUsuario } from "@/app/actions/presupuestos"
 
 interface Usuario {
   id: string
   name: string
   email: string
+  dinero: number
 }
 
-interface PresupuestoModalProps {
+interface AgregarDineroModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   onSuccess: () => void
+  usuarios: Usuario[]
 }
 
 interface FormData {
   userId: string
-  montoAsignado: string
-  periodo: string
+  dinero: string
 }
 
 interface FormErrors {
   userId?: string
-  montoAsignado?: string
-  periodo?: string
+  dinero?: string
 }
 
-export default function PresupuestoModal({ 
+export default function AgregarDineroModal({ 
   open, 
   onOpenChange, 
-  onSuccess
-}: PresupuestoModalProps) {
+  onSuccess,
+  usuarios
+}: AgregarDineroModalProps) {
   const [formData, setFormData] = useState<FormData>({
     userId: '',
-    montoAsignado: '',
-    periodo: ''
+    dinero: ''
   })
   
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [usuarios, setUsuarios] = useState<Usuario[]>([])
-  const [loadingUsuarios, setLoadingUsuarios] = useState(false)
-
-  // Cargar usuarios sin presupuesto
-  useEffect(() => {
-    if (open) {
-      cargarUsuarios()
-    }
-  }, [open])
-
-  const cargarUsuarios = async () => {
-    setLoadingUsuarios(true)
-    try {
-      const result = await obtenerUsuariosSinPresupuesto()
-      if (result.success) {
-        setUsuarios(result.data || [])
-      } else {
-        toast.error(result.error || 'Error al cargar usuarios')
-      }
-    } catch (error) {
-      console.error('Error al cargar usuarios:', error)
-      toast.error('Error al cargar usuarios')
-    } finally {
-      setLoadingUsuarios(false)
-    }
-  }
-
-  // Función para obtener fecha actual en formato yyyy-mm-dd
-  const obtenerFechaActual = () => {
-    return format(new Date(), 'yyyy-MM-dd')
-  }
 
   // Reset form cuando se abre/cierra el modal
   useEffect(() => {
     if (open) {
       setFormData({
         userId: '',
-        montoAsignado: '',
-        periodo: obtenerFechaActual()
+        dinero: ''
       })
       setErrors({})
     }
@@ -105,17 +72,13 @@ export default function PresupuestoModal({
       newErrors.userId = 'Debe seleccionar un usuario'
     }
 
-    if (!formData.montoAsignado.trim()) {
-      newErrors.montoAsignado = 'El monto es requerido'
+    if (!formData.dinero.trim()) {
+      newErrors.dinero = 'El dinero es requerido'
     } else {
-      const monto = parseFloat(formData.montoAsignado)
-      if (isNaN(monto) || monto <= 0) {
-        newErrors.montoAsignado = 'El monto debe ser un número positivo'
+      const dinero = parseFloat(formData.dinero)
+      if (isNaN(dinero) || dinero <= 0) {
+        newErrors.dinero = 'El dinero debe ser un número positivo'
       }
-    }
-
-    if (!formData.periodo.trim()) {
-      newErrors.periodo = 'El período es requerido'
     }
 
     setErrors(newErrors)
@@ -141,20 +104,19 @@ export default function PresupuestoModal({
     setIsSubmitting(true)
 
     try {
-      const presupuestoData = {
+      const dineroData = {
         userId: formData.userId,
-        montoAsignado: parseFloat(formData.montoAsignado),
-        periodo: formData.periodo
+        dinero: parseFloat(formData.dinero)
       }
 
-      const result = await asignarPresupuesto(presupuestoData)
+      const result = await agregarDineroUsuario(dineroData)
 
       if (result.success) {
-        toast.success('Presupuesto asignado correctamente')
+        toast.success(result.message || 'Dinero agregado correctamente')
         onSuccess()
         onOpenChange(false)
       } else {
-        toast.error(result.error || 'Error al asignar presupuesto')
+        toast.error(result.error || 'Error al agregar dinero')
       }
     } catch (error) {
       console.error('Error al enviar formulario:', error)
@@ -170,13 +132,18 @@ export default function PresupuestoModal({
     return numericValue
   }
 
+  const usuarioSeleccionado = usuarios.find(u => u.id === formData.userId)
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Asignar Presupuesto</DialogTitle>
+          <DialogTitle className="flex items-center gap-2">
+            <WalletIcon className="h-5 w-5" />
+            Agregar Dinero a Usuario
+          </DialogTitle>
           <DialogDescription>
-            Asigna un monto de presupuesto a un usuario para el período seleccionado.
+            Agrega dinero a la cuenta de un usuario del sistema.
           </DialogDescription>
         </DialogHeader>
 
@@ -187,15 +154,19 @@ export default function PresupuestoModal({
             <Select 
               value={formData.userId} 
               onValueChange={(value) => handleInputChange('userId', value)}
-              disabled={loadingUsuarios}
             >
               <SelectTrigger className={errors.userId ? 'border-red-500' : ''}>
-                <SelectValue placeholder={loadingUsuarios ? "Cargando usuarios..." : "Selecciona un usuario"} />
+                <SelectValue placeholder="Selecciona un usuario" />
               </SelectTrigger>
               <SelectContent>
                 {usuarios.map((usuario) => (
                   <SelectItem key={usuario.id} value={usuario.id}>
-                    {usuario.name} ({usuario.email})
+                    <div className="flex flex-col">
+                      <span className="font-medium">{usuario.name}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {usuario.email} - Dinero actual: ${usuario.dinero.toLocaleString()}
+                      </span>
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -208,47 +179,50 @@ export default function PresupuestoModal({
             )}
           </div>
 
-          {/* Monto Asignado */}
+          {/* Mostrar información del usuario seleccionado */}
+          {usuarioSeleccionado && (
+            <div className="bg-muted p-4 rounded-lg">
+              <h4 className="font-medium mb-2">Usuario Seleccionado:</h4>
+              <div className="space-y-1 text-sm">
+                <p><strong>Nombre:</strong> {usuarioSeleccionado.name}</p>
+                <p><strong>Email:</strong> {usuarioSeleccionado.email}</p>
+                <p><strong>Dinero Actual:</strong> ${usuarioSeleccionado.dinero.toLocaleString()}</p>
+              </div>
+            </div>
+          )}
+
+          {/* Dinero a Agregar */}
           <div>
-            <Label htmlFor="monto">Monto Asignado *</Label>
+            <Label htmlFor="dinero">Dinero a Agregar *</Label>
             <div className="relative">
               <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
               <Input
-                id="monto"
-                value={formData.montoAsignado}
-                onChange={(e) => handleInputChange('montoAsignado', formatearMonto(e.target.value))}
+                id="dinero"
+                value={formData.dinero}
+                onChange={(e) => handleInputChange('dinero', formatearMonto(e.target.value))}
                 placeholder="0"
-                className={`pl-8 ${errors.montoAsignado ? 'border-red-500' : ''}`}
+                className={`pl-8 ${errors.dinero ? 'border-red-500' : ''}`}
               />
             </div>
-            {errors.montoAsignado && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Este dinero se sumará al dinero actual del usuario
+            </p>
+            {errors.dinero && (
               <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircleIcon className="h-3 w-3" />
-                {errors.montoAsignado}
+                {errors.dinero}
               </p>
             )}
           </div>
 
-          {/* Fecha del Período */}
-          <div>
-            <Label htmlFor="periodo">Fecha del Período *</Label>
-            <Input
-              id="periodo"
-              type="date"
-              value={formData.periodo}
-              onChange={(e) => handleInputChange('periodo', e.target.value)}
-              className={errors.periodo ? 'border-red-500' : ''}
-            />
-            <p className="text-xs text-muted-foreground mt-1">
-              Fecha actual: {format(new Date(), 'dd-MM-yyyy')} (se puede cambiar)
-            </p>
-            {errors.periodo && (
-              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
-                <AlertCircleIcon className="h-3 w-3" />
-                {errors.periodo}
+          {/* Mostrar cálculo del nuevo total */}
+          {usuarioSeleccionado && formData.dinero && !isNaN(parseFloat(formData.dinero)) && (
+            <div className="bg-green-50 border border-green-200 p-3 rounded-lg">
+              <p className="text-sm text-green-800">
+                <strong>Nuevo total:</strong> ${(usuarioSeleccionado.dinero + parseFloat(formData.dinero)).toLocaleString()}
               </p>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Botones */}
           <div className="flex justify-end gap-3 pt-4">
@@ -265,7 +239,7 @@ export default function PresupuestoModal({
               disabled={isSubmitting}
               className="min-w-[120px]"
             >
-              {isSubmitting ? 'Asignando...' : 'Asignar Presupuesto'}
+              {isSubmitting ? 'Agregando...' : 'Agregar Dinero'}
             </Button>
           </div>
         </form>

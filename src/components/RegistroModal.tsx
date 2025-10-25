@@ -23,9 +23,10 @@ interface RegistroModalProps {
   onOpenChange: (open: boolean) => void
   registroParaEditar?: any // Registro existente para editar
   modoEdicion?: boolean // Indica si está en modo edición
+  modoVisualizacion?: boolean // Indica si está en modo solo lectura
 }
 
-export default function RegistroModal({ open, onOpenChange, registroParaEditar, modoEdicion = false }: RegistroModalProps) {
+export default function RegistroModal({ open, onOpenChange, registroParaEditar, modoEdicion = false, modoVisualizacion = false }: RegistroModalProps) {
   const [formData, setFormData] = useState({
     folio: '',
     fecha: '',

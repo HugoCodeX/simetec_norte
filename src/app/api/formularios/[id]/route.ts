@@ -29,8 +29,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   const formularioId = parseInt(resolvedParams.id)
   console.log('ID del formulario:', formularioId)
 
-  // No usar preview para forzar descarga en WebView
-  console.log('Generando PDF para descarga')
+  // Obtener parámetro de consulta para determinar si mostrar en línea o descargar
+  const { searchParams } = new URL(request.url)
+  const viewInline = searchParams.get('view') === 'inline'
+  console.log('Modo de visualización:', viewInline ? 'En línea' : 'Descarga')
 
   // Buscar en la tabla de registros en lugar de formularios
   const registro = await prisma.registro.findUnique({
@@ -604,16 +606,25 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     doc.on('end', () => resolve(Buffer.concat(bufs)))
   })
 
-  // Forzar descarga del PDF
+  // Configurar headers según el modo de visualización
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/pdf',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    'Pragma': 'no-cache',
+    'Expires': '0'
+  }
+
+  if (viewInline) {
+    // Para visualización en línea
+    headers['Content-Disposition'] = `inline; filename="registro_defectos_criticos_${registro.folio}.pdf"`
+  } else {
+    // Para descarga
+    headers['Content-Disposition'] = `attachment; filename="registro_defectos_criticos_${registro.folio}.pdf"`
+  }
+
   return new Response(pdfBuffer as any, {
     status: 200,
-    headers: {
-      'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="registro_defectos_criticos_${registro.folio}.pdf"`,
-      'Cache-Control': 'no-cache, no-store, must-revalidate',
-      'Pragma': 'no-cache',
-      'Expires': '0'
-    }
+    headers
   })
   } catch (error) {
     console.error('Error al generar PDF:', error)

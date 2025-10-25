@@ -217,6 +217,17 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     }
   };
 
+  // Función para visualizar PDF en nueva pestaña
+  const handleVisualizarPDF = async (registro: Registro) => {
+    try {
+      const url = `/api/formularios/${registro.id}?view=inline`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } catch (error) {
+      console.error('Error al abrir PDF:', error);
+      alert('Error al abrir el PDF. Por favor, inténtalo de nuevo.');
+    }
+  };
+
   // Función para descargar múltiples PDFs seleccionados
   const handleDescargarPDFsSeleccionados = async () => {
     if (registrosSeleccionados.size === 0) {
@@ -397,7 +408,13 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                               <DownloadIcon className="h-4 w-4 text-orange-500" />
                             )}
                           </Button>
-                          <Button size="sm" variant="outline" className="h-9 w-9 p-0 hover:bg-indigo-50 hover:border-indigo-300">
+                          <Button 
+                            size="sm" 
+                            variant="outline" 
+                            className="h-9 w-9 p-0 hover:bg-indigo-50 hover:border-indigo-300"
+                            onClick={() => handleVisualizarPDF(registro)}
+                            title="Ver PDF"
+                          >
                             <EyeIcon className="h-4 w-4 text-indigo-500" />
                           </Button>
                           <Button 

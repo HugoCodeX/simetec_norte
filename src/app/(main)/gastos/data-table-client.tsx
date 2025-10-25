@@ -26,14 +26,16 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from "@/components/ui/pagination";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { DollarSignIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon } from "lucide-react";
+import { DollarSignIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon, FileTextIcon, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner"
 import { eliminarGasto } from "@/app/actions/gastos"
 import GastoModal from "@/components/GastoModal"
+import InformeGastosModal from "@/components/InformeGastosModal"
 
 
 interface Gasto {
@@ -61,7 +63,9 @@ interface DataTableClientProps {
 export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
-  const [gastoParaEditar, setGastoParaEditar] = useState<Gasto | undefined>(undefined);
+  const [informeModalOpen, setInformeModalOpen] = useState(false);
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   // Filtrar gastos basado en el término de búsqueda
   const filteredGastos = gastos.filter((gasto) => {
@@ -75,35 +79,30 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
     );
   });
 
-  // Función para cerrar modal y resetear estado
+  // Función para cerrar modal
   const handleCloseModal = () => {
     setModalOpen(false);
-    setGastoParaEditar(undefined);
   };
 
   // Función para abrir modal en modo creación
   const handleCrearGasto = () => {
-    setGastoParaEditar(undefined);
     setModalOpen(true);
   };
 
-  // Función para abrir modal en modo edición
-  const handleEditarGasto = (gasto: Gasto) => {
-    setGastoParaEditar(gasto);
-    setModalOpen(true);
-  };
-
-  // Función para refrescar datos después de crear/editar
+  // Función para refrescar datos después de crear
   const handleSuccess = () => {
     window.location.reload(); // Recargar la página para obtener datos actualizados
   };
 
-  // Función para descargar archivo
-  const handleDescargarArchivo = (gasto: Gasto) => {
-    if (gasto.archivo) {
-      // Aquí implementarías la lógica de descarga
-      console.log('Descargando archivo:', gasto.archivo);
-    }
+  // Funciones para el modal de imagen
+  const handleOpenImageModal = (imageSrc: string) => {
+    setSelectedImage(imageSrc);
+    setImageModalOpen(true);
+  };
+
+  const handleCloseImageModal = () => {
+    setImageModalOpen(false);
+    setSelectedImage(null);
   };
 
   // Función para formatear monto como moneda
@@ -130,12 +129,22 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
             </div>
             <div className="flex items-center gap-2">
               {currentUser?.role === 'admin' && (
-                <Link href="/presupuestos">
-                  <Button variant="outline" className="flex items-center gap-2">
-                    <SettingsIcon className="size-4" />
-                    Gestionar Presupuestos
+                <>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2"
+                    onClick={() => setInformeModalOpen(true)}
+                  >
+                    <FileTextIcon className="size-4" />
+                    Generar Informe
                   </Button>
-                </Link>
+                  <Link href="/presupuestos">
+                    <Button variant="outline" className="flex items-center gap-2">
+                      <SettingsIcon className="size-4" />
+                      Gestionar Presupuestos
+                    </Button>
+                  </Link>
+                </>
               )}
               <Button 
                 className="flex items-center gap-2"
@@ -173,7 +182,6 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                 <TableHeader className="bg-muted/50">
                   <TableRow className="border-b-2 border-border">
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ACCIONES</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ITEM</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DESCRIPCIÓN</TableHead>
@@ -186,28 +194,6 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                   {filteredGastos.map((gasto) => (
                     <TableRow key={gasto.id} className="border-b hover:bg-muted/30 transition-colors">
                       <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{gasto.folio}</TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => handleEditarGasto(gasto)}
-                            className="h-8 w-8 p-0"
-                          >
-                            <EditIcon className="h-4 w-4" />
-                          </Button>
-                          {gasto.archivo && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleDescargarArchivo(gasto)}
-                              className="h-8 w-8 p-0"
-                            >
-                              <DownloadIcon className="h-4 w-4" />
-                            </Button>
-                          )}
-                        </div>
-                      </TableCell>
                       <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
                         {format(new Date(gasto.fecha), "dd/MM/yyyy")}
                       </TableCell>
@@ -226,10 +212,22 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                       <TableCell className="h-16 px-6 py-4">
                         {gasto.archivo ? (
                           <div className="flex items-center gap-2">
-                            <FileIcon className="h-4 w-4 text-blue-500" />
-                            <span className="text-sm text-blue-500 truncate max-w-[100px]" title={gasto.archivo}>
-                              {gasto.archivo}
-                            </span>
+                            {gasto.archivo.startsWith('data:image/') ? (
+                              <img 
+                                src={gasto.archivo} 
+                                alt="Imagen del gasto" 
+                                className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                onClick={() => handleOpenImageModal(gasto.archivo)}
+                                title="Click para ver imagen completa"
+                              />
+                            ) : (
+                              <>
+                                <FileIcon className="h-4 w-4 text-blue-500" />
+                                <span className="text-sm text-blue-500 truncate max-w-[100px]" title={gasto.archivo}>
+                                  Archivo
+                                </span>
+                              </>
+                            )}
                           </div>
                         ) : (
                           <span className="text-muted-foreground text-sm">Sin archivo</span>
@@ -270,10 +268,44 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
       <GastoModal 
         open={modalOpen} 
         onOpenChange={handleCloseModal}
-        gasto={gastoParaEditar}
         currentUser={currentUser}
         onSuccess={handleSuccess}
       />
+
+      <InformeGastosModal
+        open={informeModalOpen}
+        onOpenChange={setInformeModalOpen}
+      />
+
+      {/* Modal para mostrar imagen en tamaño completo */}
+      <Dialog open={imageModalOpen} onOpenChange={handleCloseImageModal}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0">
+          <DialogHeader className="p-6 pb-2">
+            <DialogTitle className="flex items-center justify-between">
+              <span>Imagen del Gasto</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleCloseImageModal}
+                className="h-6 w-6 p-0"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          <div className="p-6 pt-2">
+            {selectedImage && (
+              <div className="flex justify-center">
+                <img
+                  src={selectedImage}
+                  alt="Imagen del gasto en tamaño completo"
+                  className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                />
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

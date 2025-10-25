@@ -4,89 +4,80 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { PlusIcon, EditIcon, DollarSignIcon, UsersIcon, TrendingUpIcon, AlertTriangleIcon } from "lucide-react"
+import { Input } from "@/components/ui/input"
+import { PlusIcon, WalletIcon, UsersIcon, SearchIcon, MailIcon, ShieldIcon } from "lucide-react"
 import { toast } from "sonner"
-import { obtenerPresupuestos } from "@/app/actions/presupuestos"
-import PresupuestoModal from "@/components/PresupuestoModal"
+import { obtenerUsuariosConDinero } from "@/app/actions/presupuestos"
+import AgregarDineroModal from "@/components/PresupuestoModal"
 
-interface Presupuesto {
+interface Usuario {
   id: string
-  userId: string
-  montoAsignado: number
-  montoUtilizado: number
-  montoDisponible: number
-  periodo: string
-  activo: boolean
+  name: string
+  email: string
+  role: string
+  dinero: number
+  emailVerified: boolean
   createdAt: Date
   updatedAt: Date
-  user: {
-    id: string
-    name: string
-    email: string
-  }
 }
 
 export default function PresupuestosClient() {
-  const [presupuestos, setPresupuestos] = useState<Presupuesto[]>([])
+  const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
-    cargarPresupuestos()
+    cargarUsuarios()
   }, [])
 
-  const cargarPresupuestos = async () => {
+  const cargarUsuarios = async () => {
     setLoading(true)
     try {
-      const result = await obtenerPresupuestos()
+      const result = await obtenerUsuariosConDinero()
       if (result.success) {
-        setPresupuestos(result.data || [])
+        setUsuarios(result.data || [])
       } else {
-        toast.error(result.error || 'Error al cargar presupuestos')
+        toast.error(result.error || 'Error al cargar usuarios')
       }
     } catch (error) {
-      console.error('Error al cargar presupuestos:', error)
-      toast.error('Error al cargar presupuestos')
+      console.error('Error al cargar usuarios:', error)
+      toast.error('Error al cargar usuarios')
     } finally {
       setLoading(false)
     }
   }
 
   const handleSuccess = () => {
-    cargarPresupuestos()
+    cargarUsuarios()
   }
 
-  // Función para formatear período de YYYY-MM a formato legible
-  const formatearPeriodo = (periodo: string) => {
-    try {
-      const [año, mes] = periodo.split('-')
-      const fecha = new Date(parseInt(año), parseInt(mes) - 1)
-      return fecha.toLocaleDateString('es-ES', { 
-        year: 'numeric', 
-        month: 'long' 
-      })
-    } catch {
-      return periodo
-    }
-  }
+  // Filtrar usuarios basado en el término de búsqueda
+  const usuariosFiltrados = usuarios.filter((usuario) => {
+    const searchLower = searchTerm.toLowerCase()
+    return (
+      usuario.name.toLowerCase().includes(searchLower) ||
+      usuario.email.toLowerCase().includes(searchLower) ||
+      usuario.role.toLowerCase().includes(searchLower)
+    )
+  })
 
   // Calcular estadísticas
-  const totalAsignado = presupuestos.reduce((sum, p) => sum + p.montoAsignado, 0)
-  const totalUtilizado = presupuestos.reduce((sum, p) => sum + p.montoUtilizado, 0)
-  const totalDisponible = presupuestos.reduce((sum, p) => sum + p.montoDisponible, 0)
-  const usuariosConPresupuesto = presupuestos.length
+  const totalUsuarios = usuarios.length
+  const totalDinero = usuarios.reduce((sum, u) => sum + u.dinero, 0)
+  const usuariosConDinero = usuarios.filter(u => u.dinero > 0).length
 
-  const getStatusBadge = (presupuesto: Presupuesto) => {
-    const porcentajeUtilizado = (presupuesto.montoUtilizado / presupuesto.montoAsignado) * 100
-    
-    if (porcentajeUtilizado >= 100) {
-      return <Badge variant="destructive">Agotado</Badge>
-    } else if (porcentajeUtilizado >= 80) {
-      return <Badge variant="secondary">Crítico</Badge>
-    } else if (porcentajeUtilizado >= 50) {
-      return <Badge variant="outline">Medio</Badge>
-    } else {
-      return <Badge variant="default">Disponible</Badge>
+  const getRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge variant="destructive" className="flex items-center gap-1">
+          <ShieldIcon className="h-3 w-3" />
+          Admin
+        </Badge>
+      case 'usuario':
+        return <Badge variant="default">Usuario</Badge>
+      default:
+        return <Badge variant="outline">{role}</Badge>
     }
   }
 
@@ -95,7 +86,7 @@ export default function PresupuestosClient() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando presupuestos...</p>
+          <p className="text-muted-foreground">Cargando usuarios...</p>
         </div>
       </div>
     )
@@ -104,146 +95,137 @@ export default function PresupuestosClient() {
   return (
     <div className="space-y-6">
       {/* Estadísticas */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Asignado</CardTitle>
-            <DollarSignIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalAsignado.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Utilizado</CardTitle>
-            <TrendingUpIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalUtilizado.toLocaleString()}</div>
-            <p className="text-xs text-muted-foreground">
-              {totalAsignado > 0 ? `${((totalUtilizado / totalAsignado) * 100).toFixed(1)}%` : '0%'} del total
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Disponible</CardTitle>
-            <AlertTriangleIcon className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">${totalDisponible.toLocaleString()}</div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Usuarios</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Usuarios</CardTitle>
             <UsersIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{usuariosConPresupuesto}</div>
-            <p className="text-xs text-muted-foreground">Con presupuesto asignado</p>
+            <div className="text-2xl font-bold">{totalUsuarios}</div>
+            <p className="text-xs text-muted-foreground">Usuarios registrados</p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Dinero Total</CardTitle>
+            <WalletIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">${totalDinero.toLocaleString()}</div>
+            <p className="text-xs text-muted-foreground">En todas las cuentas</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Con Dinero</CardTitle>
+            <PlusIcon className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{usuariosConDinero}</div>
+            <p className="text-xs text-muted-foreground">
+              {totalUsuarios > 0 ? `${((usuariosConDinero / totalUsuarios) * 100).toFixed(1)}%` : '0%'} del total
+            </p>
+          </CardContent>
+        </Card>
+
       </div>
 
-      {/* Botón para asignar nuevo presupuesto */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-xl font-semibold">Presupuestos Asignados</h2>
+      {/* Barra de búsqueda y botón agregar dinero */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        <div className="relative flex-1 max-w-md">
+          <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+          <Input
+            placeholder="Buscar usuarios..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-10"
+          />
+        </div>
         <Button onClick={() => setModalOpen(true)}>
           <PlusIcon className="h-4 w-4 mr-2" />
-          Asignar Presupuesto
+          Agregar Dinero
         </Button>
       </div>
 
-      {/* Lista de presupuestos */}
-      {presupuestos.length === 0 ? (
+      {/* Lista de usuarios */}
+      {usuariosFiltrados.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <DollarSignIcon className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No hay presupuestos asignados</h3>
+            <UsersIcon className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">
+              {searchTerm ? 'No se encontraron usuarios' : 'No hay usuarios registrados'}
+            </h3>
             <p className="text-muted-foreground text-center mb-4">
-              Comienza asignando presupuestos a los usuarios del sistema
+              {searchTerm 
+                ? 'Intenta con otros términos de búsqueda' 
+                : 'Los usuarios aparecerán aquí cuando se registren en el sistema'
+              }
             </p>
-            <Button onClick={() => setModalOpen(true)}>
-              <PlusIcon className="h-4 w-4 mr-2" />
-              Asignar Primer Presupuesto
-            </Button>
+            {searchTerm && (
+              <Button variant="outline" onClick={() => setSearchTerm('')}>
+                Limpiar búsqueda
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {presupuestos.map((presupuesto) => (
-            <Card key={presupuesto.id} className="hover:shadow-md transition-shadow">
+          {usuariosFiltrados.map((usuario) => (
+            <Card key={usuario.id} className="hover:shadow-md transition-shadow">
               <CardHeader>
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-lg">{presupuesto.user.name}</CardTitle>
-                  {getStatusBadge(presupuesto)}
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <CardTitle className="text-lg">{usuario.name}</CardTitle>
+                    <CardDescription className="flex items-center gap-1">
+                      <MailIcon className="h-3 w-3" />
+                      {usuario.email}
+                    </CardDescription>
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    {getRoleBadge(usuario.role)}
+                  </div>
                 </div>
-                <CardDescription>{presupuesto.user.email}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Período:</span>
-                    <span className="font-medium">{formatearPeriodo(presupuesto.periodo)}</span>
+                <div className="text-center p-4 bg-muted rounded-lg">
+                  <div className="text-2xl font-bold text-green-600">
+                    ${usuario.dinero.toLocaleString()}
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Asignado:</span>
-                    <span className="font-medium">${presupuesto.montoAsignado.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Utilizado:</span>
-                    <span className="font-medium">${presupuesto.montoUtilizado.toLocaleString()}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Disponible:</span>
-                    <span className={`font-medium ${presupuesto.montoDisponible < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                      ${presupuesto.montoDisponible.toLocaleString()}
-                    </span>
-                  </div>
+                  <p className="text-sm text-muted-foreground">Dinero disponible</p>
                 </div>
 
-                {/* Barra de progreso */}
-                <div className="space-y-1">
-                  <div className="flex justify-between text-xs text-muted-foreground">
-                    <span>Progreso de uso</span>
-                    <span>{((presupuesto.montoUtilizado / presupuesto.montoAsignado) * 100).toFixed(1)}%</span>
+                <div className="space-y-2 text-xs text-muted-foreground">
+                  <div className="flex justify-between">
+                    <span>Registrado:</span>
+                    <span>{new Date(usuario.createdAt).toLocaleDateString()}</span>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all ${
-                        (presupuesto.montoUtilizado / presupuesto.montoAsignado) >= 1 
-                          ? 'bg-red-500' 
-                          : (presupuesto.montoUtilizado / presupuesto.montoAsignado) >= 0.8 
-                            ? 'bg-yellow-500' 
-                            : 'bg-green-500'
-                      }`}
-                      style={{ 
-                        width: `${Math.min((presupuesto.montoUtilizado / presupuesto.montoAsignado) * 100, 100)}%` 
-                      }}
-                    />
+                  <div className="flex justify-between">
+                    <span>Última actualización:</span>
+                    <span>{new Date(usuario.updatedAt).toLocaleDateString()}</span>
                   </div>
                 </div>
-
-                <Button variant="outline" size="sm" className="w-full">
-                  <EditIcon className="h-3 w-3 mr-2" />
-                  Editar Presupuesto
-                </Button>
               </CardContent>
             </Card>
           ))}
         </div>
       )}
 
-      {/* Modal para asignar presupuesto */}
-      <PresupuestoModal
+      {/* Mostrar información de resultados filtrados */}
+      {searchTerm && (
+        <div className="text-center text-sm text-muted-foreground">
+          Mostrando {usuariosFiltrados.length} de {usuarios.length} usuarios
+        </div>
+      )}
+
+      {/* Modal para agregar dinero */}
+      <AgregarDineroModal
         open={modalOpen}
         onOpenChange={setModalOpen}
         onSuccess={handleSuccess}
+        usuarios={usuarios}
       />
     </div>
   )
