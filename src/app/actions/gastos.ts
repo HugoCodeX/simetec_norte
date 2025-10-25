@@ -290,7 +290,7 @@ export async function actualizarGasto(id: string, formData: FormData) {
 
     // Verificar que el folio sea único (excluyendo el gasto actual)
     if (validatedData.folio && validatedData.folio !== gastoExistente.folio) {
-      const existingGasto = await prisma.gasto.findUnique({
+      const existingGasto = await prisma.gasto.findFirst({
         where: { folio: validatedData.folio }
       })
 

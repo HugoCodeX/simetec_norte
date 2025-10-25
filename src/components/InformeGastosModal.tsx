@@ -155,7 +155,7 @@ export default function InformeGastosModal({
         mesNombre
       })
 
-      if (result.success && result.pdfUrl) {
+      if (result.success && 'pdfUrl' in result && result.pdfUrl) {
         // Crear un enlace temporal para descargar el PDF
         const link = document.createElement('a')
         link.href = result.pdfUrl
@@ -167,7 +167,7 @@ export default function InformeGastosModal({
         toast.success('Informe generado correctamente')
         onOpenChange(false)
       } else {
-        toast.error(result.error || 'Error al generar el informe')
+        toast.error(('error' in result ? result.error : undefined) || 'Error al generar el informe')
       }
     } catch (error) {
       console.error('Error al generar informe:', error)

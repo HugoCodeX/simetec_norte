@@ -14,7 +14,7 @@ interface Usuario {
   id: string
   name: string
   email: string
-  role: string
+  role: string | null
   dinero: number
   emailVerified: boolean
   createdAt: Date
@@ -58,7 +58,7 @@ export default function PresupuestosClient() {
     return (
       usuario.name.toLowerCase().includes(searchLower) ||
       usuario.email.toLowerCase().includes(searchLower) ||
-      usuario.role.toLowerCase().includes(searchLower)
+      (usuario.role && usuario.role.toLowerCase().includes(searchLower))
     )
   })
 
@@ -67,7 +67,11 @@ export default function PresupuestosClient() {
   const totalDinero = usuarios.reduce((sum, u) => sum + u.dinero, 0)
   const usuariosConDinero = usuarios.filter(u => u.dinero > 0).length
 
-  const getRoleBadge = (role: string) => {
+  const getRoleBadge = (role: string | null) => {
+    if (!role) {
+      return <Badge variant="outline">Sin rol</Badge>
+    }
+    
     switch (role) {
       case 'admin':
         return <Badge variant="destructive" className="flex items-center gap-1">

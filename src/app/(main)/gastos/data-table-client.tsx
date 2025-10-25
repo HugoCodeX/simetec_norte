@@ -217,7 +217,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                                 src={gasto.archivo} 
                                 alt="Imagen del gasto" 
                                 className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                onClick={() => handleOpenImageModal(gasto.archivo)}
+                                onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
                                 title="Click para ver imagen completa"
                               />
                             ) : (
