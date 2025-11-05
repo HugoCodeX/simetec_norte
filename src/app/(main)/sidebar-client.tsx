@@ -106,8 +106,7 @@ export function SidebarClient({ navItems, className }: SidebarClientProps) {
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></div>
               </div>
               <div className="text-center">
-                <h1 className="font-bold text-lg text-foreground">SIMETEC</h1>
-                <p className="text-xs text-muted-foreground">Dashboard</p>
+                <h1 className="font-bold text-lg text-foreground">Simetec Sur Ltda.</h1>
               </div>
             </Link>
           </div>
