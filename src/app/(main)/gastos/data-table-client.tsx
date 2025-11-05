@@ -117,7 +117,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
     <>
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <CardTitle className="flex items-center gap-2">
                 <DollarSignIcon className="size-5" />
@@ -127,19 +127,19 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                 Listado completo de gastos registrados ({filteredGastos.length} gastos)
               </CardDescription>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {currentUser?.role === 'admin' && (
                 <>
                   <Button 
                     variant="outline" 
-                    className="flex items-center gap-2"
+                    className="flex items-center gap-2 w-full sm:w-auto"
                     onClick={() => setInformeModalOpen(true)}
                   >
                     <FileTextIcon className="size-4" />
                     Generar Informe
                   </Button>
                   <Link href="/presupuestos">
-                    <Button variant="outline" className="flex items-center gap-2">
+                    <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto">
                       <SettingsIcon className="size-4" />
                       Gestionar Presupuestos
                     </Button>
@@ -147,7 +147,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                 </>
               )}
               <Button 
-                className="flex items-center gap-2"
+                className="flex items-center gap-2 w-full sm:w-auto"
                 onClick={handleCrearGasto}
               >
                 <PlusIcon className="size-4" />
@@ -159,11 +159,11 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
         <CardContent>
           {/* Buscador */}
           <div className="mb-6">
-            <div className="relative max-w-sm">
+            <div className="relative w-full sm:max-w-sm">
               <SearchIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Buscar por folio, item, descripción, usuario..."
-                className="pl-10"
+                className="w-full pl-10"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -177,67 +177,130 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <Table className="border-separate border-spacing-0">
-                <TableHeader className="bg-muted/50">
-                  <TableRow className="border-b-2 border-border">
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ITEM</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DESCRIPCIÓN</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">USUARIO</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">MONTO</TableHead>
-                    <TableHead className="h-14 px-6 py-4 font-semibold text-left">ARCHIVO</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredGastos.map((gasto) => (
-                    <TableRow key={gasto.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{gasto.folio}</TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
-                        {format(new Date(gasto.fecha), "dd/MM/yyyy")}
-                      </TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border max-w-[200px] truncate" title={gasto.item}>
-                        {gasto.item}
-                      </TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border max-w-[200px] truncate" title={gasto.descripcion || 'Sin descripción'}>
-                        {gasto.descripcion || <span className="text-muted-foreground text-sm">Sin descripción</span>}
-                      </TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
-                        {gasto.usuario}
-                      </TableCell>
-                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border font-medium text-green-600">
-                        {formatearMonto(gasto.monto)}
-                      </TableCell>
-                      <TableCell className="h-16 px-6 py-4">
-                        {gasto.archivo ? (
-                          <div className="flex items-center gap-2">
-                            {gasto.archivo.startsWith('data:image/') ? (
-                              <img 
-                                src={gasto.archivo} 
-                                alt="Imagen del gasto" 
-                                className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
-                                title="Click para ver imagen completa"
-                              />
-                            ) : (
-                              <>
-                                <FileIcon className="h-4 w-4 text-blue-500" />
-                                <span className="text-sm text-blue-500 truncate max-w-[100px]" title={gasto.archivo}>
-                                  Archivo
-                                </span>
-                              </>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground text-sm">Sin archivo</span>
-                        )}
-                      </TableCell>
+            <>
+              {/* Vista móvil tipo tarjeta */}
+              <div className="sm:hidden space-y-3">
+                {filteredGastos.map((gasto) => (
+                  <div key={gasto.id} className="rounded-lg border bg-background p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Folio</p>
+                        <p className="text-sm font-medium">{gasto.folio}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Fecha</p>
+                        <p className="text-sm font-medium">{format(new Date(gasto.fecha), "dd/MM/yyyy")}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground">Item</p>
+                      <p className="text-sm font-medium truncate" title={gasto.item}>{gasto.item}</p>
+                    </div>
+                    <div className="mt-2">
+                      <p className="text-xs text-muted-foreground">Descripción</p>
+                      <p className="text-sm truncate" title={gasto.descripcion || 'Sin descripción'}>
+                        {gasto.descripcion || <span className="text-muted-foreground">Sin descripción</span>}
+                      </p>
+                    </div>
+                    <div className="mt-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">Usuario</p>
+                        <p className="text-sm font-medium">{gasto.usuario}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">Monto</p>
+                        <p className="text-sm font-semibold text-green-600">{formatearMonto(gasto.monto)}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground">Archivo</p>
+                      {gasto.archivo ? (
+                        <div className="mt-1">
+                          {gasto.archivo.startsWith('data:image/') ? (
+                            <img
+                              src={gasto.archivo}
+                              alt="Imagen del gasto"
+                              className="h-20 w-full object-cover rounded border cursor-pointer"
+                              onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
+                            />
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <FileIcon className="h-4 w-4 text-blue-500" />
+                              <span className="text-sm text-blue-500 truncate" title={gasto.archivo}>Archivo</span>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sin archivo</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Vista de tabla en >= sm */}
+              <div className="hidden sm:block overflow-x-auto">
+                <Table className="border-separate border-spacing-0">
+                  <TableHeader className="bg-muted/50">
+                    <TableRow className="border-b-2 border-border">
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ITEM</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DESCRIPCIÓN</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">USUARIO</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">MONTO</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left">ARCHIVO</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+                  </TableHeader>
+                  <TableBody>
+                    {filteredGastos.map((gasto) => (
+                      <TableRow key={gasto.id} className="border-b hover:bg-muted/30 transition-colors">
+                        <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{gasto.folio}</TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
+                          {format(new Date(gasto.fecha), "dd/MM/yyyy")}
+                        </TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border max-w-[200px] truncate" title={gasto.item}>
+                          {gasto.item}
+                        </TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border max-w-[200px] truncate" title={gasto.descripcion || 'Sin descripción'}>
+                          {gasto.descripcion || <span className="text-muted-foreground text-sm">Sin descripción</span>}
+                        </TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
+                          {gasto.usuario}
+                        </TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border font-medium text-green-600">
+                          {formatearMonto(gasto.monto)}
+                        </TableCell>
+                        <TableCell className="h-16 px-6 py-4">
+                          {gasto.archivo ? (
+                            <div className="flex items-center gap-2">
+                              {gasto.archivo.startsWith('data:image/') ? (
+                                <img 
+                                  src={gasto.archivo} 
+                                  alt="Imagen del gasto" 
+                                  className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                                  onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
+                                  title="Click para ver imagen completa"
+                                />
+                              ) : (
+                                <>
+                                  <FileIcon className="h-4 w-4 text-blue-500" />
+                                  <span className="text-sm text-blue-500 truncate max-w-[100px]" title={gasto.archivo}>
+                                    Archivo
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-sm">Sin archivo</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
           
           {/* Paginación - Por ahora simple, se puede mejorar después */}
