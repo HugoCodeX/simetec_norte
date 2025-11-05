@@ -104,12 +104,12 @@ export async function crearGasto(formData: FormData) {
           }
         }
 
-        // Validar tamaño (50MB máximo)
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        // Validar tamaño (100MB máximo)
+        const maxSize = 100 * 1024 * 1024; // 100MB
         if (file.size > maxSize) {
           return {
             success: false,
-            error: 'El archivo es demasiado grande. Máximo 50MB.'
+            error: 'El archivo es demasiado grande. Máximo 100MB.'
           }
         }
 
@@ -263,12 +263,12 @@ export async function actualizarGasto(id: string, formData: FormData) {
           }
         }
 
-        // Validar tamaño (50MB máximo)
-        const maxSize = 50 * 1024 * 1024; // 50MB
+        // Validar tamaño (100MB máximo)
+        const maxSize = 100 * 1024 * 1024; // 100MB
         if (file.size > maxSize) {
           return {
             success: false,
-            error: 'El archivo es demasiado grande. Máximo 50MB.'
+            error: 'El archivo es demasiado grande. Máximo 100MB.'
           }
         }
 
