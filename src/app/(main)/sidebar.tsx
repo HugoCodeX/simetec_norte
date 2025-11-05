@@ -14,7 +14,7 @@ export interface NavItem {
 
 export const navItems: NavItem[] = [
   {
-    title: "Dashboard",
+    title: "Defectos Criticos",
     href: "/dashboard",
     icon: (
       <svg className="w-full h-full" fill="none" stroke="currentColor" viewBox="0 0 24 24">
