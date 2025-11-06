@@ -7,7 +7,7 @@ const nextConfig: NextConfig = {
   serverActions: {
     // Aumenta el límite del cuerpo para Server Actions (por defecto es 1MB)
     // Valores válidos: número en bytes o string tipo '3mb', '500kb', etc.
-    bodySizeLimit: '100mb',
+    bodySizeLimit: '5000mb',
   },
   eslint: {
     ignoreDuringBuilds: true,
