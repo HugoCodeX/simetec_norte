@@ -264,11 +264,11 @@ async function generarPDFInforme({
     // Preparar nueva página para comprobantes
     doc.addPage()
     let currentY = 50
-    const left = 30
-    const rightMargin = 30
-    const bottomMargin = 35
-    const gap = 8
-    const labelHeight = 22
+    const left = 25
+    const rightMargin = 25
+    const bottomMargin = 30
+    const gap = 6
+    const labelHeight = 20
 
     // Filtrar solo gastos con imagen
     const images = gastos
@@ -298,9 +298,9 @@ async function generarPDFInforme({
     }
 
     // Calcular altura apuntando a 2 filas por página; mínimo elevado para legibilidad
-    const targetRows = 2
+    const targetRows = 1
     let tileH = Math.floor(((availableHeight - (targetRows - 1) * gap) / targetRows) - labelHeight)
-    const minTileH = 260
+    const minTileH = 320
     if (tileH < minTileH) {
       // Intentar con 1 fila para maximizar tamaño
       const rows1 = 1
@@ -316,7 +316,7 @@ async function generarPDFInforme({
       if (itemsOnPage > 0 && Math.floor(itemsOnPage / cols) >= rowsPerPage) {
         // Nueva página para continuar
         doc.addPage()
-        currentY = 60
+        currentY = 50
         drawTitle(true)
         itemsOnPage = 0
       }
