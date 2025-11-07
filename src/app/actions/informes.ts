@@ -263,12 +263,12 @@ async function generarPDFInforme({
   const drawReceiptsSection = (_startY: number) => {
     // Preparar nueva página para comprobantes
     doc.addPage()
-    let currentY = 60
+    let currentY = 72
     const left = 12
     const rightMargin = 12
     const bottomMargin = 28
     const gap = 2
-    const labelHeight = 16
+    const labelHeight = 28
 
     // Filtrar solo gastos con imagen
     const images = gastos
@@ -280,7 +280,7 @@ async function generarPDFInforme({
     const drawTitle = (continuacion = false) => {
       doc.font('Calibri-Bold').fontSize(12)
         .text(continuacion ? 'COMPROBANTES (continuación)' : 'COMPROBANTES', left, currentY)
-      currentY += 28
+      currentY += 32
     }
 
     drawTitle(false)
@@ -300,7 +300,7 @@ async function generarPDFInforme({
     // Calcular altura apuntando a 2 filas por página; mínimo elevado para legibilidad
     const targetRows = 1
     let tileH = Math.floor(((availableHeight - (targetRows - 1) * gap) / targetRows) - labelHeight)
-    const minTileH = 420
+    const minTileH = 450
     if (tileH < minTileH) {
       // Intentar con 1 fila para maximizar tamaño
       const rows1 = 1
@@ -316,7 +316,7 @@ async function generarPDFInforme({
       if (itemsOnPage > 0 && Math.floor(itemsOnPage / cols) >= rowsPerPage) {
         // Nueva página para continuar
         doc.addPage()
-        currentY = 60
+        currentY = 72
         drawTitle(true)
         itemsOnPage = 0
       }
