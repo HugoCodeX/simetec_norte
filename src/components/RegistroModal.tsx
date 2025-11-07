@@ -541,6 +541,9 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                 <SelectItem value="Intergas">Intergas</SelectItem>
                 <SelectItem value="Gassur">GasSur</SelectItem>
                 <SelectItem value="Equipo GLP">Equipo GLP</SelectItem>
+                <SelectItem value="Energas">Energas</SelectItem>
+                <SelectItem value="GasValpo">GGasValpo</SelectItem>
+                <SelectItem value="GasMaule">GasMaule</SelectItem>
 
               </SelectContent>
             </Select>
