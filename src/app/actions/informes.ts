@@ -264,11 +264,11 @@ async function generarPDFInforme({
     // Preparar nueva página para comprobantes
     doc.addPage()
     let currentY = 50
-    const left = 25
-    const rightMargin = 25
+    const left = 18
+    const rightMargin = 18
     const bottomMargin = 30
-    const gap = 6
-    const labelHeight = 20
+    const gap = 4
+    const labelHeight = 18
 
     // Filtrar solo gastos con imagen
     const images = gastos
