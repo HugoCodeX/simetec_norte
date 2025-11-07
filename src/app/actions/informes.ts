@@ -173,7 +173,7 @@ async function generarPDFInforme({
     const colWidths = [60, 80, 120, 80, 80, 80] // Anchos de columnas
 
     // Encabezados de la tabla
-    const headers = ['Fecha', 'Proveedor', 'Concepto', 'Tipo Doc.', 'N° Doc.', 'Monto']
+    const headers = ['Fecha', 'Ref.', 'Concepto', 'Tipo Doc.', 'N° Doc.', 'Monto']
     
     // Dibujar encabezados
     doc.font('Calibri-Bold').fontSize(9).fillColor('black')
@@ -188,11 +188,12 @@ async function generarPDFInforme({
     doc.font('Calibri').fontSize(8)
     let currentY = tableTop + rowHeight
 
-    gastos.forEach((gasto: any) => {
+    for (let idx = 0; idx < gastos.length; idx++) {
+      const gasto = gastos[idx]
       currentX = tableLeft
       const rowData = [
         new Date(gasto.fecha).toLocaleDateString('es-ES'),
-        '-',
+        String(idx + 1),
         gasto.item,
         'Factura',
         gasto.folio,
@@ -205,7 +206,7 @@ async function generarPDFInforme({
         currentX += colWidths[i]
       })
       currentY += rowHeight
-    })
+    }
 
     // Llenar filas vacías hasta completar 15 filas
     const filasVacias = Math.max(0, 15 - gastos.length)
@@ -245,10 +246,119 @@ async function generarPDFInforme({
     doc.text('0', totalLeft + 100, startY + 60)
   }
 
+  // Helper para decodificar imágenes en base64 (data URL)
+  const decodeBase64Image = (dataUrl: string): Buffer | null => {
+    try {
+      if (!dataUrl || !dataUrl.startsWith('data:image/')) return null
+      const commaIndex = dataUrl.indexOf(',')
+      if (commaIndex === -1) return null
+      const base64 = dataUrl.slice(commaIndex + 1)
+      return Buffer.from(base64, 'base64')
+    } catch {
+      return null
+    }
+  }
+
+  // Función para dibujar comprobantes con imágenes en página nueva (grilla paginada)
+  const drawReceiptsSection = (_startY: number) => {
+    // Preparar nueva página para comprobantes
+    doc.addPage()
+    let currentY = 60
+    const left = 50
+    const rightMargin = 50
+    const bottomMargin = 40
+    const gap = 14
+    const labelHeight = 26
+
+    // Filtrar solo gastos con imagen
+    const images = gastos
+      .map((g, i) => ({ gasto: g, idx: i + 1, buffer: g.archivo ? decodeBase64Image(g.archivo) : null }))
+      .filter(x => !!x.buffer) as { gasto: any, idx: number, buffer: Buffer }[]
+
+    if (images.length === 0) return currentY
+
+    const drawTitle = (continuacion = false) => {
+      doc.font('Calibri-Bold').fontSize(12)
+        .text(continuacion ? 'COMPROBANTES (continuación)' : 'COMPROBANTES', left, currentY)
+      currentY += 20
+    }
+
+    drawTitle(false)
+
+    // Área disponible y configuración de grilla
+    const availableWidth = doc.page.width - left - rightMargin
+    const availableHeight = doc.page.height - bottomMargin - currentY
+
+    // Preferir 3 columnas por legibilidad; reducir si el ancho es pequeño
+    let cols = 3
+    let tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
+    if (tileW < 160) {
+      cols = 2
+      tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
+    }
+    if (tileW < 140) {
+      cols = 1
+      tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
+    }
+
+    // Calcular altura de miniatura apuntando a 3 filas por página con mínimos
+    const targetRows = 3
+    let tileH = Math.floor(((availableHeight - (targetRows - 1) * gap) / targetRows) - labelHeight)
+    const minTileH = 120
+    if (tileH < minTileH) {
+      // Intentar con 2 filas
+      const rows2 = 2
+      tileH = Math.floor(((availableHeight - (rows2 - 1) * gap) / rows2) - labelHeight)
+      if (tileH < minTileH) {
+        // Último recurso: 1 fila
+        const rows1 = 1
+        tileH = Math.max(minTileH, Math.floor(((availableHeight - (rows1 - 1) * gap) / rows1) - labelHeight))
+      }
+    }
+
+    const rowsPerPage = Math.max(1, Math.floor((doc.page.height - bottomMargin - currentY + gap) / (tileH + labelHeight + gap)))
+
+    // Dibujar grilla paginada
+    doc.font('Calibri')
+    let itemsOnPage = 0
+    for (let i = 0; i < images.length; i++) {
+      if (itemsOnPage > 0 && Math.floor(itemsOnPage / cols) >= rowsPerPage) {
+        // Nueva página para continuar
+        doc.addPage()
+        currentY = 60
+        drawTitle(true)
+        itemsOnPage = 0
+      }
+
+      const { gasto, idx, buffer } = images[i]
+      const row = Math.floor(itemsOnPage / cols)
+      const col = itemsOnPage % cols
+      const x = left + col * (tileW + gap)
+      const y = currentY + row * (tileH + labelHeight + gap)
+
+      const fechaStr = new Date(gasto.fecha).toLocaleDateString('es-ES')
+      const montoStr = gasto.monto.toLocaleString('es-ES')
+
+      // Encabezado corto por cada miniatura
+      doc.font('Calibri-Bold').fontSize(9).text(`Ref. ${idx} — ${fechaStr}`, x, y, { width: tileW })
+      doc.font('Calibri').fontSize(8).text(`Folio: ${gasto.folio} | ${gasto.item} | ${montoStr}`, x, y + 12, { width: tileW })
+
+      // Imagen del comprobante como miniatura
+      doc.image(buffer, x, y + labelHeight, { fit: [tileW, tileH] })
+
+      itemsOnPage++
+    }
+
+    const usedRows = Math.ceil(itemsOnPage / cols)
+    return currentY + usedRows * (tileH + labelHeight + gap)
+  }
+
   // Generar el documento
   await drawHeader()
   const tableEndY = drawTable()
   drawTotals(tableEndY)
+  // Sección de comprobantes con imágenes
+  const receiptsEndY = drawReceiptsSection(tableEndY + 40)
 
   // Finalizar el documento
   doc.end()

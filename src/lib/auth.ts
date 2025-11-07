@@ -10,6 +10,11 @@ export const auth = betterAuth({
     provider: "postgresql",
   }),
   trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
+  session: {
+    expiresIn: 60 * 60 * 24 * 15,
+    updateAge: 60 * 60 * 24,
+    freshAge: 60 * 30,
+  },
   emailAndPassword: {
     enabled: true,
     requireEmailVerification: false,
