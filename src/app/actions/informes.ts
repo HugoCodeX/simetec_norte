@@ -289,31 +289,22 @@ async function generarPDFInforme({
     const availableWidth = doc.page.width - left - rightMargin
     const availableHeight = doc.page.height - bottomMargin - currentY
 
-    // Preferir 3 columnas por legibilidad; reducir si el ancho es pequeño
-    let cols = 3
+    // Preferir 2 columnas para imágenes más grandes; reducir a 1 si es necesario
+    let cols = 2
     let tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
-    if (tileW < 160) {
-      cols = 2
-      tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
-    }
-    if (tileW < 140) {
+    if (tileW < 200) {
       cols = 1
       tileW = Math.floor((availableWidth - (cols - 1) * gap) / cols)
     }
 
-    // Calcular altura de miniatura apuntando a 3 filas por página con mínimos
-    const targetRows = 3
+    // Calcular altura apuntando a 2 filas por página; mínimo elevado para legibilidad
+    const targetRows = 2
     let tileH = Math.floor(((availableHeight - (targetRows - 1) * gap) / targetRows) - labelHeight)
-    const minTileH = 120
+    const minTileH = 200
     if (tileH < minTileH) {
-      // Intentar con 2 filas
-      const rows2 = 2
-      tileH = Math.floor(((availableHeight - (rows2 - 1) * gap) / rows2) - labelHeight)
-      if (tileH < minTileH) {
-        // Último recurso: 1 fila
-        const rows1 = 1
-        tileH = Math.max(minTileH, Math.floor(((availableHeight - (rows1 - 1) * gap) / rows1) - labelHeight))
-      }
+      // Intentar con 1 fila para maximizar tamaño
+      const rows1 = 1
+      tileH = Math.max(minTileH, Math.floor(((availableHeight - (rows1 - 1) * gap) / rows1) - labelHeight))
     }
 
     const rowsPerPage = Math.max(1, Math.floor((doc.page.height - bottomMargin - currentY + gap) / (tileH + labelHeight + gap)))
