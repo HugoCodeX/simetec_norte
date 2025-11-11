@@ -33,12 +33,14 @@ interface FormData {
   usuarioId: string
   mes: string
   año: string
+  numeroInforme: string
 }
 
 interface FormErrors {
   usuarioId?: string
   mes?: string
   año?: string
+  numeroInforme?: string
 }
 
 const MESES = [
@@ -63,7 +65,8 @@ export default function InformeGastosModal({
   const [formData, setFormData] = useState<FormData>({
     usuarioId: '',
     mes: '',
-    año: new Date().getFullYear().toString()
+    año: new Date().getFullYear().toString(),
+    numeroInforme: ''
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
@@ -79,7 +82,8 @@ export default function InformeGastosModal({
       setFormData({
         usuarioId: '',
         mes: '',
-        año: new Date().getFullYear().toString()
+        año: new Date().getFullYear().toString(),
+        numeroInforme: ''
       })
       setErrors({})
     }
@@ -122,6 +126,10 @@ export default function InformeGastosModal({
       }
     }
 
+    if (!formData.numeroInforme || formData.numeroInforme.trim() === '') {
+      newErrors.numeroInforme = 'Ingresa el número de informe'
+    }
+
     setErrors(newErrors)
     return Object.keys(newErrors).length === 0
   }
@@ -152,7 +160,8 @@ export default function InformeGastosModal({
         usuarioNombre: usuario?.name || '',
         mes: formData.mes,
         año: formData.año,
-        mesNombre
+        mesNombre,
+        numeroInforme: formData.numeroInforme.trim()
       })
 
       if (result.success && 'pdfUrl' in result && result.pdfUrl) {
@@ -220,6 +229,24 @@ export default function InformeGastosModal({
               <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircleIcon className="h-3 w-3" />
                 {errors.usuarioId}
+              </p>
+            )}
+          </div>
+
+          {/* Número de Informe */}
+          <div>
+            <Label htmlFor="numeroInforme">Número de informe *</Label>
+            <Input
+              id="numeroInforme"
+              value={formData.numeroInforme}
+              onChange={(e) => handleInputChange('numeroInforme', e.target.value)}
+              placeholder="Ej: 0001-2025"
+              className={errors.numeroInforme ? 'border-red-500' : ''}
+            />
+            {errors.numeroInforme && (
+              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircleIcon className="h-3 w-3" />
+                {errors.numeroInforme}
               </p>
             )}
           </div>

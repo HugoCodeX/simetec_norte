@@ -13,7 +13,8 @@ const informeSchema = z.object({
   usuarioNombre: z.string().min(1, "El nombre del usuario es requerido"),
   mes: z.string().regex(/^(0[1-9]|1[0-2])$/, "Mes inválido"),
   año: z.string().regex(/^\d{4}$/, "Año inválido"),
-  mesNombre: z.string().min(1, "El nombre del mes es requerido")
+  mesNombre: z.string().min(1, "El nombre del mes es requerido"),
+  numeroInforme: z.string().min(1, "El número de informe es requerido")
 })
 
 type InformeInput = z.infer<typeof informeSchema>
@@ -82,13 +83,15 @@ async function generarPDFInforme({
   mesNombre,
   año,
   gastos,
-  totalGastos
+  totalGastos,
+  numeroInforme
 }: {
   usuarioNombre: string
   mesNombre: string
   año: string
   gastos: any[]
   totalGastos: number
+  numeroInforme: string
 }): Promise<Buffer> {
   // Rutas de las fuentes
   const fontRegular = join(process.cwd(), 'public', 'fonts', 'CALIBRI.TTF')
@@ -111,7 +114,7 @@ async function generarPDFInforme({
     margin: 40,
     font: fontRegular,
     info: {
-      Title: `Rendición de Gastos - ${usuarioNombre}`,
+      Title: `Rendición de Gastos - ${usuarioNombre} (N° ${numeroInforme})`,
       Author: 'Sistema de Gestión',
       Subject: `Informe de gastos ${mesNombre} ${año}`,
       Keywords: 'gastos, rendición, informe'
@@ -144,7 +147,7 @@ async function generarPDFInforme({
 
       // Número de informe
       doc.font('Calibri').fontSize(12)
-        .text('N° XXXX', 0, 85, { align: 'center' })
+        .text(`N° ${numeroInforme}`, 0, 85, { align: 'center' })
 
       // Información del trabajador y fecha
       const fechaActual = new Date().toLocaleDateString('es-ES')
@@ -162,7 +165,7 @@ async function generarPDFInforme({
       doc.font('Calibri-Bold').fontSize(10)
         .text('Descripción:', 50, 180)
       doc.font('Calibri').fontSize(10)
-        .text(`Se rinden gastos de cliente condominio XY visita del 01 al 20 de ${mesNombre} ${año}`, 50, 195)
+        .text(`Se rinden gastos de ${usuarioNombre} desde el inicio del mes hasta el fin del mes de ${mesNombre} ${año}`, 50, 195)
   }
 
   // Función para dibujar la tabla
@@ -402,12 +405,13 @@ export async function generarInformeGastos(data: InformeInput) {
     const totalGastos = gastos.reduce((sum, gasto) => sum + gasto.monto, 0)
 
     // Generar PDF directamente
-    const pdfBuffer = await generarPDFInforme({
+  const pdfBuffer = await generarPDFInforme({
       usuarioNombre: validatedData.usuarioNombre,
       mesNombre: validatedData.mesNombre,
       año: validatedData.año,
       gastos,
-      totalGastos
+      totalGastos,
+      numeroInforme: validatedData.numeroInforme
     })
 
     // Convertir buffer a base64 para retornar
