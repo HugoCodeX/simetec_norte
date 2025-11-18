@@ -251,10 +251,13 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
  
   // Línea divisoria dentro del cuadrito principal - más compacta
   doc.moveTo(40, 88).lineTo(400, 88).stroke()
- 
+
   // Título del formulario dentro del mismo cuadrito principal - más compacto
   doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('ANEXO G - ANEXO 3 FORMULARIO DE COMUNICACIÓN', 40, 95, { align: 'center', width: 360 })
   doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('DE DEFECTOS CRÍTICOS A USUARIOS', 40, 108, { align: 'center', width: 360 })
+
+  // Folio en el cuadrito del logo
+  doc.font('Calibri-Bold').fontSize(9).fillColor('black').text(`FOLIO: ${registro.folio}`, 400, 115, { align: 'center', width: 160 })
 
   // Tabla principal - diseño exacto como la imagen
   const tableX = 40
