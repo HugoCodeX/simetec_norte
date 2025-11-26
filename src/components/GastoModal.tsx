@@ -13,11 +13,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { CalendarIcon, AlertCircleIcon, UploadIcon, XIcon } from "lucide-react"
+import { AlertCircleIcon, UploadIcon, XIcon, Loader2Icon, CheckCircleIcon } from "lucide-react"
 import { toast } from "sonner"
 import { crearGasto } from "@/app/actions/gastos"
 import { format } from "date-fns"
-import { es } from "date-fns/locale"
+import { useUploadThing } from "@/lib/uploadthing"
 
 
 interface Gasto {
@@ -66,7 +66,8 @@ interface FormData {
   item: string
   descripcion: string
   monto: string
-  archivo: string
+  archivoUrl: string
+  archivoKey: string
 }
 
 interface FormErrors {
@@ -89,12 +90,37 @@ export default function GastoModal({
     item: '',
     descripcion: '',
     monto: '',
-    archivo: ''
+    archivoUrl: '',
+    archivoKey: ''
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [isUploading, setIsUploading] = useState(false)
+  const [uploadComplete, setUploadComplete] = useState(false)
+
+  // Hook de uploadthing
+  const { startUpload } = useUploadThing("gastoImage", {
+    onClientUploadComplete: (res) => {
+      if (res && res[0]) {
+        setFormData(prev => ({
+          ...prev,
+          archivoUrl: res[0].ufsUrl,
+          archivoKey: res[0].key
+        }))
+        setUploadComplete(true)
+        toast.success('Imagen subida correctamente')
+      }
+      setIsUploading(false)
+    },
+    onUploadError: (error) => {
+      console.error('Error al subir imagen:', error)
+      toast.error('Error al subir la imagen: ' + error.message)
+      setIsUploading(false)
+      setSelectedFile(null)
+    },
+  })
 
   // Efecto para limpiar formulario cuando se abre el modal
   useEffect(() => {
@@ -105,10 +131,12 @@ export default function GastoModal({
         item: '',
         descripcion: '',
         monto: '',
-        archivo: ''
+        archivoUrl: '',
+        archivoKey: ''
       })
       setErrors({})
       setSelectedFile(null)
+      setUploadComplete(false)
     }
   }, [open])
 
@@ -149,11 +177,29 @@ export default function GastoModal({
     }
   }
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (file) {
+      // Validar tipo de archivo
+      const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png']
+      if (!allowedTypes.includes(file.type)) {
+        toast.error('Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PNG.')
+        return
+      }
+
+      // Validar tamaño (16MB máximo para uploadthing)
+      const maxSize = 16 * 1024 * 1024
+      if (file.size > maxSize) {
+        toast.error('El archivo es demasiado grande. Máximo 16MB.')
+        return
+      }
+
       setSelectedFile(file)
-      setFormData(prev => ({ ...prev, archivo: file.name }))
+      setUploadComplete(false)
+      setIsUploading(true)
+
+      // Subir archivo a uploadthing
+      await startUpload([file])
     }
   }
 
@@ -165,22 +211,24 @@ export default function GastoModal({
       return
     }
 
+    // Verificar si hay una subida en progreso
+    if (isUploading) {
+      toast.error('Espera a que termine la subida de la imagen')
+      return
+    }
+
     setIsSubmitting(true)
 
     try {
-      const formDataToSend = new FormData()
-      formDataToSend.append('folio', formData.folio)
-      formDataToSend.append('fecha', formData.fecha)
-      formDataToSend.append('item', formData.item)
-      formDataToSend.append('descripcion', formData.descripcion)
-      formDataToSend.append('monto', formData.monto)
-
-      // Agregar archivo si existe
-      if (selectedFile) {
-        formDataToSend.append('archivo', selectedFile)
-      }
-
-      const result = await crearGasto(formDataToSend)
+      const result = await crearGasto({
+        folio: formData.folio,
+        fecha: formData.fecha,
+        item: formData.item,
+        descripcion: formData.descripcion || undefined,
+        monto: parseFloat(formData.monto),
+        archivoUrl: formData.archivoUrl || undefined,
+        archivoKey: formData.archivoKey || undefined
+      })
 
       if (result.success) {
         toast.success('Gasto creado correctamente')
@@ -204,10 +252,12 @@ export default function GastoModal({
       item: '',
       descripcion: '',
       monto: '',
-      archivo: ''
+      archivoUrl: '',
+      archivoKey: ''
     })
     setErrors({})
     setSelectedFile(null)
+    setUploadComplete(false)
     onOpenChange(false)
   }
 
@@ -356,23 +406,36 @@ export default function GastoModal({
                     accept=".png,.jpg,.jpeg"
                     onChange={handleFileChange}
                     className="hidden"
+                    disabled={isUploading}
                   />
                   <label htmlFor="archivo" className="cursor-pointer">
                     <UploadIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
                     <p className="text-gray-600 font-medium mb-2">Haz clic para subir una imagen</p>
-                    <p className="text-sm text-gray-500">PNG, JPG hasta 50MB</p>
+                    <p className="text-sm text-gray-500">PNG, JPG hasta 16MB</p>
                   </label>
                 </div>
               ) : (
-                <div className="border border-gray-300 rounded-lg p-4">
+                <div className={`border rounded-lg p-4 ${uploadComplete ? 'border-green-300 bg-green-50' : 'border-gray-300'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
-                        <UploadIcon className="h-5 w-5 text-blue-600" />
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                        isUploading ? 'bg-yellow-100' : uploadComplete ? 'bg-green-100' : 'bg-blue-100'
+                      }`}>
+                        {isUploading ? (
+                          <Loader2Icon className="h-5 w-5 text-yellow-600 animate-spin" />
+                        ) : uploadComplete ? (
+                          <CheckCircleIcon className="h-5 w-5 text-green-600" />
+                        ) : (
+                          <UploadIcon className="h-5 w-5 text-blue-600" />
+                        )}
                       </div>
                       <div>
                         <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
-                        <p className="text-xs text-gray-500">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p className="text-xs text-gray-500">
+                          {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          {isUploading && ' - Subiendo...'}
+                          {uploadComplete && ' - ¡Subida completada!'}
+                        </p>
                       </div>
                     </div>
                     <Button
@@ -381,10 +444,13 @@ export default function GastoModal({
                       size="sm"
                       onClick={() => {
                         setSelectedFile(null)
+                        setFormData(prev => ({ ...prev, archivoUrl: '', archivoKey: '' }))
+                        setUploadComplete(false)
                         const input = document.getElementById('archivo') as HTMLInputElement
                         if (input) input.value = ''
                       }}
                       className="text-gray-400 hover:text-gray-600"
+                      disabled={isUploading}
                     >
                       <XIcon className="h-4 w-4" />
                     </Button>
@@ -402,16 +468,16 @@ export default function GastoModal({
               type="button"
               variant="outline"
               onClick={handleCancelar}
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting}
+              disabled={isSubmitting || isUploading}
               className="min-w-[120px]"
             >
-              {isSubmitting ? 'Creando...' : 'Crear Gasto'}
+              {isSubmitting ? 'Creando...' : isUploading ? 'Subiendo imagen...' : 'Crear Gasto'}
             </Button>
           </div>
         </form>

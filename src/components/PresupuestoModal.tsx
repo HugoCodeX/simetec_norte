@@ -11,10 +11,12 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { AlertCircleIcon, WalletIcon } from "lucide-react"
 import { toast } from "sonner"
 import { agregarDineroUsuario } from "@/app/actions/presupuestos"
+import { format } from "date-fns"
 
 interface Usuario {
   id: string
@@ -33,11 +35,14 @@ interface AgregarDineroModalProps {
 interface FormData {
   userId: string
   dinero: string
+  fecha: string
+  descripcion: string
 }
 
 interface FormErrors {
   userId?: string
   dinero?: string
+  fecha?: string
 }
 
 export default function AgregarDineroModal({ 
@@ -48,7 +53,9 @@ export default function AgregarDineroModal({
 }: AgregarDineroModalProps) {
   const [formData, setFormData] = useState<FormData>({
     userId: '',
-    dinero: ''
+    dinero: '',
+    fecha: format(new Date(), 'yyyy-MM-dd'),
+    descripcion: ''
   })
   
   const [errors, setErrors] = useState<FormErrors>({})
@@ -59,7 +66,9 @@ export default function AgregarDineroModal({
     if (open) {
       setFormData({
         userId: '',
-        dinero: ''
+        dinero: '',
+        fecha: format(new Date(), 'yyyy-MM-dd'),
+        descripcion: ''
       })
       setErrors({})
     }
@@ -79,6 +88,10 @@ export default function AgregarDineroModal({
       if (isNaN(dinero) || dinero <= 0) {
         newErrors.dinero = 'El dinero debe ser un número positivo'
       }
+    }
+
+    if (!formData.fecha) {
+      newErrors.fecha = 'La fecha es requerida'
     }
 
     setErrors(newErrors)
@@ -106,7 +119,9 @@ export default function AgregarDineroModal({
     try {
       const dineroData = {
         userId: formData.userId,
-        dinero: parseFloat(formData.dinero)
+        dinero: parseFloat(formData.dinero),
+        fecha: formData.fecha,
+        descripcion: formData.descripcion || undefined
       }
 
       const result = await agregarDineroUsuario(dineroData)
@@ -191,28 +206,60 @@ export default function AgregarDineroModal({
             </div>
           )}
 
-          {/* Dinero a Agregar */}
-          <div>
-            <Label htmlFor="dinero">Dinero a Agregar *</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
-              <Input
-                id="dinero"
-                value={formData.dinero}
-                onChange={(e) => handleInputChange('dinero', formatearMonto(e.target.value))}
-                placeholder="0"
-                className={`pl-8 ${errors.dinero ? 'border-red-500' : ''}`}
-              />
+          {/* Dinero y Fecha */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="dinero">Dinero a Agregar *</Label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground">$</span>
+                <Input
+                  id="dinero"
+                  value={formData.dinero}
+                  onChange={(e) => handleInputChange('dinero', formatearMonto(e.target.value))}
+                  placeholder="0"
+                  className={`pl-8 ${errors.dinero ? 'border-red-500' : ''}`}
+                />
+              </div>
+              {errors.dinero && (
+                <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircleIcon className="h-3 w-3" />
+                  {errors.dinero}
+                </p>
+              )}
             </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Este dinero se sumará al dinero actual del usuario
-            </p>
-            {errors.dinero && (
-              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
-                <AlertCircleIcon className="h-3 w-3" />
-                {errors.dinero}
-              </p>
-            )}
+
+            <div>
+              <Label htmlFor="fecha">Fecha *</Label>
+              <Input
+                id="fecha"
+                type="date"
+                value={formData.fecha}
+                onChange={(e) => handleInputChange('fecha', e.target.value)}
+                className={errors.fecha ? 'border-red-500' : ''}
+              />
+              {errors.fecha && (
+                <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                  <AlertCircleIcon className="h-3 w-3" />
+                  {errors.fecha}
+                </p>
+              )}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground -mt-4">
+            Este dinero se sumará al dinero actual del usuario
+          </p>
+
+          {/* Descripción (opcional) */}
+          <div>
+            <Label htmlFor="descripcion">Descripción (opcional)</Label>
+            <Textarea
+              id="descripcion"
+              value={formData.descripcion}
+              onChange={(e) => handleInputChange('descripcion', e.target.value)}
+              placeholder="Ej: Fondo para gastos de octubre, reembolso, etc."
+              className="resize-none"
+              rows={2}
+            />
           </div>
 
           {/* Mostrar cálculo del nuevo total */}

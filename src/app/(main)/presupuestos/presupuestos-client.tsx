@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { PlusIcon, WalletIcon, UsersIcon, SearchIcon, MailIcon, ShieldIcon } from "lucide-react"
+import { PlusIcon, WalletIcon, UsersIcon, SearchIcon, MailIcon, ShieldIcon, HistoryIcon } from "lucide-react"
 import { toast } from "sonner"
 import { obtenerUsuariosConDinero } from "@/app/actions/presupuestos"
 import AgregarDineroModal from "@/components/PresupuestoModal"
+import HistorialAsignacionesModal from "@/components/HistorialAsignacionesModal"
 
 interface Usuario {
   id: string
@@ -25,6 +26,7 @@ export default function PresupuestosClient() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
+  const [historialOpen, setHistorialOpen] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
@@ -137,7 +139,7 @@ export default function PresupuestosClient() {
 
       </div>
 
-      {/* Barra de búsqueda y botón agregar dinero */}
+      {/* Barra de búsqueda y botones */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 max-w-md">
           <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
@@ -148,10 +150,16 @@ export default function PresupuestosClient() {
             className="pl-10"
           />
         </div>
-        <Button onClick={() => setModalOpen(true)}>
-          <PlusIcon className="h-4 w-4 mr-2" />
-          Agregar Dinero
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setHistorialOpen(true)}>
+            <HistoryIcon className="h-4 w-4 mr-2" />
+            Ver Historial
+          </Button>
+          <Button onClick={() => setModalOpen(true)}>
+            <PlusIcon className="h-4 w-4 mr-2" />
+            Agregar Dinero
+          </Button>
+        </div>
       </div>
 
       {/* Lista de usuarios */}
@@ -230,6 +238,14 @@ export default function PresupuestosClient() {
         onOpenChange={setModalOpen}
         onSuccess={handleSuccess}
         usuarios={usuarios}
+      />
+
+      {/* Modal de historial */}
+      <HistorialAsignacionesModal
+        open={historialOpen}
+        onOpenChange={setHistorialOpen}
+        usuarios={usuarios}
+        onAsignacionEliminada={handleSuccess}
       />
     </div>
   )

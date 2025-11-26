@@ -4,7 +4,9 @@ import prisma from "@/lib/prisma"
 import { getServerSession } from "@/lib/get-session"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
+import { UTApi } from "uploadthing/server"
 
+const utapi = new UTApi()
 
 // Esquema de validación para gastos
 const gastoSchema = z.object({
@@ -13,7 +15,8 @@ const gastoSchema = z.object({
   item: z.string().min(1, "El item es requerido"),
   descripcion: z.string().optional(),
   monto: z.number(), // Permitir montos negativos y positivos
-  archivo: z.string().optional(),
+  archivoUrl: z.string().optional(), // URL de uploadthing
+  archivoKey: z.string().optional(), // Key para poder eliminar el archivo
 })
 
 type GastoInput = z.infer<typeof gastoSchema>
@@ -69,8 +72,16 @@ export async function obtenerGastos() {
   }
 }
 
-// Función para crear un nuevo gasto con archivo
-export async function crearGasto(formData: FormData) {
+// Función para crear un nuevo gasto con archivo (URL de uploadthing)
+export async function crearGasto(data: {
+  folio: string
+  fecha: string
+  item: string
+  descripcion?: string
+  monto: number
+  archivoUrl?: string
+  archivoKey?: string
+}) {
   try {
     const session = await getServerSession()
 
@@ -81,54 +92,20 @@ export async function crearGasto(formData: FormData) {
       }
     }
 
-    // Extraer datos del FormData
-    const data = {
-      folio: formData.get('folio') as string,
-      fecha: new Date(formData.get('fecha') as string),
-      item: formData.get('item') as string,
-      descripcion: formData.get('descripcion') as string || undefined,
-      monto: parseFloat(formData.get('monto') as string),
-      archivo: undefined as string | undefined
-    }
-
-    // Manejar archivo si existe - convertir a base64
-    const file = formData.get('archivo') as File | null
-    if (file && file.size > 0) {
-      try {
-        // Validar tipo de archivo
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (!allowedTypes.includes(file.type)) {
-          return {
-            success: false,
-            error: 'Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PNG.'
-          }
-        }
-
-        // Validar tamaño (100MB máximo)
-        const maxSize = 100 * 1024 * 1024; // 100MB
-        if (file.size > maxSize) {
-          return {
-            success: false,
-            error: 'El archivo es demasiado grande. Máximo 100MB.'
-          }
-        }
-
-        // Convertir archivo a base64
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
-        data.archivo = base64
-      } catch (uploadError) {
-        return {
-          success: false,
-          error: uploadError instanceof Error ? uploadError.message : "Error al procesar la imagen"
-        }
-      }
+    // Preparar datos para validación
+    const gastoData = {
+      folio: data.folio,
+      fecha: new Date(data.fecha),
+      item: data.item,
+      descripcion: data.descripcion || undefined,
+      monto: data.monto,
+      archivoUrl: data.archivoUrl,
+      archivoKey: data.archivoKey
     }
 
     // Validar datos
-    console.log(`[DEBUG] Datos a validar:`, data)
-    const validatedData = gastoSchema.parse(data)
+    console.log(`[DEBUG] Datos a validar:`, gastoData)
+    const validatedData = gastoSchema.parse(gastoData)
     console.log(`[DEBUG] Datos validados exitosamente:`, validatedData)
 
     // Usar transacción para asegurar consistencia
@@ -144,7 +121,7 @@ export async function crearGasto(formData: FormData) {
       
       console.log(`[DEBUG] Usuario ${usuarioAntes?.name} - Dinero antes: ${usuarioAntes?.dinero}, Gasto: ${validatedData.monto}`)
 
-      // Crear el gasto
+      // Crear el gasto con la URL de uploadthing
       console.log(`[DEBUG] Creando gasto en la base de datos`)
       const gasto = await tx.gasto.create({
         data: {
@@ -153,7 +130,8 @@ export async function crearGasto(formData: FormData) {
           item: validatedData.item,
           descripcion: validatedData.descripcion || null,
           monto: validatedData.monto,
-          archivo: validatedData.archivo || null,
+          archivo: validatedData.archivoUrl || null,
+          archivoKey: validatedData.archivoKey || null,
           userId: session.user.id
         },
         include: {
@@ -209,7 +187,16 @@ export async function crearGasto(formData: FormData) {
 }
 
 // Función para actualizar un gasto existente
-export async function actualizarGasto(id: string, formData: FormData) {
+export async function actualizarGasto(id: string, data: {
+  folio: string
+  fecha: string
+  item: string
+  descripcion?: string
+  monto: number
+  archivoUrl?: string
+  archivoKey?: string
+  mantenerArchivoExistente?: boolean
+}) {
   try {
     const session = await getServerSession()
 
@@ -240,53 +227,30 @@ export async function actualizarGasto(id: string, formData: FormData) {
       }
     }
 
-    // Extraer datos del FormData
-    const data = {
-      folio: formData.get('folio') as string,
-      fecha: new Date(formData.get('fecha') as string),
-      item: formData.get('item') as string,
-      descripcion: formData.get('descripcion') as string || undefined,
-      monto: parseFloat(formData.get('monto') as string),
-      archivo: gastoExistente.archivo // Mantener archivo existente por defecto
+    // Preparar datos para actualización
+    const gastoData = {
+      folio: data.folio,
+      fecha: new Date(data.fecha),
+      item: data.item,
+      descripcion: data.descripcion || undefined,
+      monto: data.monto,
+      archivoUrl: data.mantenerArchivoExistente ? gastoExistente.archivo : data.archivoUrl,
+      archivoKey: data.mantenerArchivoExistente ? gastoExistente.archivoKey : data.archivoKey
     }
 
-    // Manejar nuevo archivo si existe - convertir a base64
-    const file = formData.get('archivo') as File | null
-    if (file && file.size > 0) {
+    // Si hay un nuevo archivo y existía uno anterior, eliminar el anterior de uploadthing
+    if (!data.mantenerArchivoExistente && data.archivoUrl && gastoExistente.archivoKey) {
       try {
-        // Validar tipo de archivo
-        const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
-        if (!allowedTypes.includes(file.type)) {
-          return {
-            success: false,
-            error: 'Tipo de archivo no permitido. Solo se permiten JPG, JPEG y PNG.'
-          }
-        }
-
-        // Validar tamaño (100MB máximo)
-        const maxSize = 100 * 1024 * 1024; // 100MB
-        if (file.size > maxSize) {
-          return {
-            success: false,
-            error: 'El archivo es demasiado grande. Máximo 100MB.'
-          }
-        }
-
-        // Convertir archivo a base64
-        const arrayBuffer = await file.arrayBuffer()
-        const buffer = Buffer.from(arrayBuffer)
-        const base64 = `data:${file.type};base64,${buffer.toString('base64')}`
-        data.archivo = base64
-      } catch (uploadError) {
-        return {
-          success: false,
-          error: uploadError instanceof Error ? uploadError.message : "Error al procesar la imagen"
-        }
+        await utapi.deleteFiles(gastoExistente.archivoKey)
+        console.log(`[DEBUG] Archivo anterior eliminado: ${gastoExistente.archivoKey}`)
+      } catch (deleteError) {
+        console.error("Error al eliminar archivo anterior:", deleteError)
+        // Continuamos aunque falle la eliminación
       }
     }
 
     // Validar los datos parciales
-    const validatedData = gastoSchema.partial().parse(data)
+    const validatedData = gastoSchema.partial().parse(gastoData)
 
     // Verificar que el folio sea único (excluyendo el gasto actual)
     if (validatedData.folio && validatedData.folio !== gastoExistente.folio) {
@@ -304,7 +268,15 @@ export async function actualizarGasto(id: string, formData: FormData) {
 
     const gasto = await prisma.gasto.update({
       where: { id },
-      data: validatedData,
+      data: {
+        folio: validatedData.folio,
+        fecha: validatedData.fecha,
+        item: validatedData.item,
+        descripcion: validatedData.descripcion || null,
+        monto: validatedData.monto,
+        archivo: validatedData.archivoUrl || null,
+        archivoKey: validatedData.archivoKey || null
+      },
       include: {
         user: {
           select: {
@@ -368,12 +340,21 @@ export async function eliminarGasto(id: string) {
       }
     }
 
+    // Eliminar archivo de uploadthing si existe
+    if (gastoExistente.archivoKey) {
+      try {
+        await utapi.deleteFiles(gastoExistente.archivoKey)
+        console.log(`[DEBUG] Archivo eliminado de uploadthing: ${gastoExistente.archivoKey}`)
+      } catch (deleteError) {
+        console.error("Error al eliminar archivo de uploadthing:", deleteError)
+        // Continuamos aunque falle la eliminación
+      }
+    }
+
     // Eliminar gasto de la base de datos
     await prisma.gasto.delete({
       where: { id }
     })
-
-    // Nota: Con base64, no necesitamos eliminar archivos externos
 
     revalidatePath("/gastos")
 

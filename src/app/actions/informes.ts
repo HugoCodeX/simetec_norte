@@ -77,6 +77,32 @@ export async function obtenerGastosPorUsuarioYFecha(usuarioId: string, mes: stri
   }
 }
 
+// Función para obtener asignaciones de dinero de un usuario en un mes específico
+async function obtenerAsignacionesMes(usuarioId: string, mes: string, año: string) {
+  // Crear fechas de inicio y fin del mes
+  const fechaInicio = new Date(`${año}-${mes}-01`)
+  const fechaFin = new Date(parseInt(año), parseInt(mes), 0, 23, 59, 59)
+
+  const asignaciones = await prisma.asignacionDinero.findMany({
+    where: {
+      userId: usuarioId,
+      fecha: {
+        gte: fechaInicio,
+        lte: fechaFin
+      }
+    },
+    orderBy: { fecha: 'asc' }
+  })
+
+  // Calcular total del mes
+  const totalMes = asignaciones.reduce((sum, a) => sum + a.monto, 0)
+
+  return {
+    asignaciones,
+    totalMes
+  }
+}
+
 // Función para generar PDF directamente
 async function generarPDFInforme({
   usuarioNombre,
@@ -84,7 +110,8 @@ async function generarPDFInforme({
   año,
   gastos,
   totalGastos,
-  numeroInforme
+  numeroInforme,
+  fondoEntregado
 }: {
   usuarioNombre: string
   mesNombre: string
@@ -92,6 +119,7 @@ async function generarPDFInforme({
   gastos: any[]
   totalGastos: number
   numeroInforme: string
+  fondoEntregado: number
 }): Promise<Buffer> {
   // Rutas de las fuentes
   const fontRegular = join(process.cwd(), 'public', 'fonts', 'CALIBRI.TTF')
@@ -155,11 +183,11 @@ async function generarPDFInforme({
         .text(`Nombre Trabajador(a): ${usuarioNombre}`, 50, 120)
         .text(`Fecha: ${fechaActual}`, 400, 120)
 
-      // Información de fondos
+      // Información de fondos (usando datos reales del mes)
+      const fondoFormateado = fondoEntregado.toLocaleString('es-CL')
       doc.font('Calibri').fontSize(10)
         .text('Saldo inicial:', 50, 140)
-        .text('Fondo entregado: 100.000 Transferencia Cta. Cte. Empresa Scotiabank / Efectivo', 200, 140)
-        .text('Fondo por rendir: 100.100', 200, 155)
+        .text(`Fondo entregado: ${fondoFormateado} Transferencia Cta. Cte. Empresa Scotiabank / Efectivo`, 200, 140)
 
       // Descripción
       doc.font('Calibri-Bold').fontSize(10)
@@ -233,37 +261,59 @@ async function generarPDFInforme({
     
     // Total Gastos
     doc.text('Total Gastos', totalLeft, startY)
-    doc.text(totalGastos.toLocaleString('es-ES'), totalLeft + 100, startY)
+    doc.text(totalGastos.toLocaleString('es-CL'), totalLeft + 100, startY)
 
-    // Fondos por rendir
+    // Fondos por rendir (usando el fondo entregado real del mes)
     doc.text('Fondos por rendir', totalLeft, startY + 20)
-    doc.text('-100.100', totalLeft + 100, startY + 20)
+    doc.text(`${fondoEntregado.toLocaleString('es-CL')}`, totalLeft + 100, startY + 20)
 
-    // A favor empresa
-    const aFavorEmpresa = 100100 - totalGastos
+    // Calcular diferencia
+    const diferencia = fondoEntregado - totalGastos
+
+    // A favor empresa (cuando el fondo es mayor que los gastos)
+    const aFavorEmpresa = diferencia > 0 ? diferencia : 0
     doc.text('A favor empresa', totalLeft, startY + 40)
-    doc.text(aFavorEmpresa.toLocaleString('es-ES'), totalLeft + 100, startY + 40)
+    doc.text(aFavorEmpresa.toLocaleString('es-CL'), totalLeft + 100, startY + 40)
 
-    // A favor trabajador
+    // A favor trabajador (cuando los gastos son mayores que el fondo)
+    const aFavorTrabajador = diferencia < 0 ? Math.abs(diferencia) : 0
     doc.text('A favor trabajador', totalLeft, startY + 60)
-    doc.text('0', totalLeft + 100, startY + 60)
+    doc.text(aFavorTrabajador.toLocaleString('es-CL'), totalLeft + 100, startY + 60)
   }
 
-  // Helper para decodificar imágenes en base64 (data URL)
-  const decodeBase64Image = (dataUrl: string): Buffer | null => {
+  // Helper para obtener imagen desde URL o base64
+  const getImageBuffer = async (archivo: string): Promise<Buffer | null> => {
     try {
-      if (!dataUrl || !dataUrl.startsWith('data:image/')) return null
-      const commaIndex = dataUrl.indexOf(',')
-      if (commaIndex === -1) return null
-      const base64 = dataUrl.slice(commaIndex + 1)
-      return Buffer.from(base64, 'base64')
-    } catch {
+      if (!archivo) return null
+      
+      // Si es base64 (legacy)
+      if (archivo.startsWith('data:image/')) {
+        const commaIndex = archivo.indexOf(',')
+        if (commaIndex === -1) return null
+        const base64 = archivo.slice(commaIndex + 1)
+        return Buffer.from(base64, 'base64')
+      }
+      
+      // Si es una URL (uploadthing), descargar la imagen
+      if (archivo.startsWith('http://') || archivo.startsWith('https://')) {
+        const response = await fetch(archivo)
+        if (!response.ok) {
+          console.error(`Error al descargar imagen: ${response.status}`)
+          return null
+        }
+        const arrayBuffer = await response.arrayBuffer()
+        return Buffer.from(arrayBuffer)
+      }
+      
+      return null
+    } catch (error) {
+      console.error('Error al obtener imagen:', error)
       return null
     }
   }
 
   // Función para dibujar comprobantes con imágenes en página nueva (grilla paginada)
-  const drawReceiptsSection = (_startY: number) => {
+  const drawReceiptsSection = async (_startY: number) => {
     // Preparar nueva página para comprobantes
     doc.addPage()
     let currentY = 72
@@ -273,10 +323,16 @@ async function generarPDFInforme({
     const gap = 2
     const labelHeight = 28
 
-    // Filtrar solo gastos con imagen
-    const images = gastos
-      .map((g, i) => ({ gasto: g, idx: i + 1, buffer: g.archivo ? decodeBase64Image(g.archivo) : null }))
-      .filter(x => !!x.buffer) as { gasto: any, idx: number, buffer: Buffer }[]
+    // Filtrar solo gastos con imagen y descargar las imágenes
+    const gastosConImagen = gastos.filter(g => g.archivo)
+    const imagesPromises = gastosConImagen.map(async (g, i) => ({
+      gasto: g,
+      idx: gastos.indexOf(g) + 1,
+      buffer: await getImageBuffer(g.archivo)
+    }))
+    
+    const imagesResults = await Promise.all(imagesPromises)
+    const images = imagesResults.filter(x => !!x.buffer) as { gasto: any, idx: number, buffer: Buffer }[]
 
     if (images.length === 0) return currentY
 
@@ -351,8 +407,8 @@ async function generarPDFInforme({
   await drawHeader()
   const tableEndY = drawTable()
   drawTotals(tableEndY)
-  // Sección de comprobantes con imágenes
-  const receiptsEndY = drawReceiptsSection(tableEndY + 40)
+  // Sección de comprobantes con imágenes (ahora descarga desde URLs)
+  await drawReceiptsSection(tableEndY + 40)
 
   // Finalizar el documento
   doc.end()
@@ -401,17 +457,27 @@ export async function generarInformeGastos(data: InformeInput) {
 
     const gastos = gastosResult.data || []
 
-    // Calcular totales
+    // Calcular totales de gastos
     const totalGastos = gastos.reduce((sum, gasto) => sum + gasto.monto, 0)
 
+    // Obtener asignaciones del mes para calcular el fondo entregado
+    const asignacionesData = await obtenerAsignacionesMes(
+      validatedData.usuarioId,
+      validatedData.mes,
+      validatedData.año
+    )
+
+    const fondoEntregado = asignacionesData.totalMes
+
     // Generar PDF directamente
-  const pdfBuffer = await generarPDFInforme({
+    const pdfBuffer = await generarPDFInforme({
       usuarioNombre: validatedData.usuarioNombre,
       mesNombre: validatedData.mesNombre,
       año: validatedData.año,
       gastos,
       totalGastos,
-      numeroInforme: validatedData.numeroInforme
+      numeroInforme: validatedData.numeroInforme,
+      fondoEntregado
     })
 
     // Convertir buffer a base64 para retornar
@@ -422,7 +488,9 @@ export async function generarInformeGastos(data: InformeInput) {
       success: true,
       data: {
         gastos,
-        totalGastos
+        totalGastos,
+        fondoEntregado,
+        asignaciones: asignacionesData.asignaciones
       },
       pdfUrl: pdfDataUrl
     }

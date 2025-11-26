@@ -45,7 +45,7 @@ export async function crearRegistro(data: RegistroData) {
       nuevoFolio = (ultimoNumero + 1).toString()
     } else {
       // Si no hay registros, empezar desde 100
-      nuevoFolio = "100"
+      nuevoFolio = "265"
     }
     
     // Crear el registro con los defectos críticos
@@ -123,7 +123,7 @@ export async function obtenerProximoFolio() {
       proximoFolio = (ultimoNumero + 1).toString()
     } else {
       // Si no hay registros, empezar desde 100
-      proximoFolio = "100"
+      proximoFolio = "265"
     }
 
     return {
