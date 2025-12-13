@@ -29,10 +29,11 @@ import {
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { format, addDays } from "date-fns";
-import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, Loader2 } from "lucide-react";
+import { FileTextIcon, EyeIcon, EditIcon, DownloadIcon, PlusIcon, SearchIcon, Loader2, MailIcon } from "lucide-react";
 import RegistroModal from "@/components/RegistroModal";
 import PDFNotificacionModal, { NotificacionData } from "@/components/PDFNotificacionModal";
 import { useState, useEffect } from "react";
+import { toast } from "sonner";
 // Removida importación de generarPDFRegistro - ahora usamos API route
 
 interface Registro {
@@ -66,6 +67,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [registroParaEditar, setRegistroParaEditar] = useState<Registro | null>(null);
   const [modoEdicion, setModoEdicion] = useState(false);
   const [descargandoPDF, setDescargandoPDF] = useState<number | null>(null);
+  const [enviandoEmail, setEnviandoEmail] = useState<number | null>(null);
   const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<number>>(new Set());
   const [modalNotificacionOpen, setModalNotificacionOpen] = useState(false);
 
@@ -88,7 +90,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     const seleccionesValidas = new Set(
       Array.from(registrosSeleccionados).filter(id => registrosValidosIds.has(id))
     );
-    
+
     if (seleccionesValidas.size !== registrosSeleccionados.size) {
       setRegistrosSeleccionados(seleccionesValidas);
     }
@@ -131,7 +133,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const handleSeleccionarTodos = () => {
     const registrosFiltradosIds = filteredRegistros.map(r => r.id);
     const todosSeleccionados = registrosFiltradosIds.every(id => registrosSeleccionados.has(id));
-    
+
     if (todosSeleccionados) {
       // Si todos los filtrados están seleccionados, deseleccionar solo los filtrados
       const nuevosSeleccionados = new Set(registrosSeleccionados);
@@ -155,21 +157,21 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const handleDescargarPDF = async (registro: Registro) => {
     // Activar estado de carga para este registro específico
     setDescargandoPDF(registro.id);
-    
+
     try {
       const isWebView = isAndroidWebView();
-      
+
       // Usar siempre el método de fetch pero con diferentes configuraciones
       const url = `/api/formularios/${registro.id}`;
       const response = await fetch(url);
-      
+
       if (!response.ok) {
         throw new Error('Error al generar PDF');
       }
-      
+
       // Obtener el blob del PDF
       const blob = await response.blob();
-      
+
       if (isWebView) {
         // Para WebView de Android, intentar múltiples métodos
         try {
@@ -191,7 +193,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
           link.style.display = 'none';
           document.body.appendChild(link);
           link.click();
-          
+
           setTimeout(() => {
             document.body.removeChild(link);
             URL.revokeObjectURL(downloadUrl);
@@ -241,29 +243,29 @@ export function DataTableClient({ registros }: DataTableClientProps) {
 
   const handleGenerarPDFNotificacion = async (datosNotificacion: NotificacionData) => {
     setDescargandoPDF(-1); // Usar -1 para indicar descarga múltiple
-    
+
     try {
       const registrosParaDescargar = registros.filter(r => registrosSeleccionados.has(r.id));
-      
+
       const idsUnicos = new Set(registrosParaDescargar.map(r => r.id));
       if (idsUnicos.size !== registrosParaDescargar.length) {
         console.warn('Se detectaron registros duplicados, filtrando...');
-        const registrosSinDuplicados = registrosParaDescargar.filter((registro, index, array) => 
+        const registrosSinDuplicados = registrosParaDescargar.filter((registro, index, array) =>
           array.findIndex(r => r.id === registro.id) === index
         );
         registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
       }
       const registroIds = registrosParaDescargar.map(r => r.id).join(',');
-      
+
       const params = new URLSearchParams({
         ids: registroIds,
         comunidad: datosNotificacion.comunidad || 'No especificado',
-        direccion: datosNotificacion.direccionComunidad || 'No especificado', 
+        direccion: datosNotificacion.direccionComunidad || 'No especificado',
         administrador: datosNotificacion.administrador || 'No especificado',
         fechaNotificacion: datosNotificacion.fechaNotificacion || new Date().toISOString().slice(0, 10),
         empresaDistribuidora: datosNotificacion.empresaDistribuidora || 'No especificado'
       });
-      
+
       const downloadUrl = `/api/notificacion-defectos?${params.toString()}`;
       window.location.href = downloadUrl;
       setRegistrosSeleccionados(new Set());
@@ -272,6 +274,39 @@ export function DataTableClient({ registros }: DataTableClientProps) {
       alert('Error al generar PDF de notificación. Por favor, inténtalo de nuevo.');
     } finally {
       setDescargandoPDF(null);
+    }
+  };
+
+  const handleEnviarEmail = async (registro: Registro) => {
+    if (!registro.correoElectronico) {
+      toast.error("Este registro no tiene un correo electrónico asociado.");
+      return;
+    }
+
+    setEnviandoEmail(registro.id);
+
+    try {
+      const response = await fetch('/api/send-notification-email', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          id: registro.id,
+          email: registro.correoElectronico,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Error al enviar el correo');
+      }
+
+      toast.success(`Correo enviado exitosamente a ${registro.correoElectronico}`);
+    } catch (error) {
+      console.error('Error al enviar correo:', error);
+      toast.error('Error al enviar el correo. Por favor, inténtalo de nuevo.');
+    } finally {
+      setEnviandoEmail(null);
     }
   };
 
@@ -289,7 +324,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 Listado completo de inspecciones realizadas ({filteredRegistros.length} registros)
               </CardDescription>
             </div>
-            <Button 
+            <Button
               className="flex items-center gap-2"
               onClick={handleCrearRegistro}
             >
@@ -310,7 +345,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            
+
             {/* Controles de selección masiva */}
             {registrosSeleccionados.size > 0 && (
               <div className="flex items-center gap-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
@@ -345,7 +380,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
               </div>
             )}
           </div>
-          
+
           {filteredRegistros.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
@@ -394,9 +429,9 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                       <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{registro.folio}</TableCell>
                       <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
                         <div className="flex items-center gap-2">
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-9 w-9 p-0 hover:bg-orange-50 hover:border-orange-300"
                             onClick={() => handleDescargarPDF(registro)}
                             disabled={descargandoPDF === registro.id}
@@ -408,18 +443,32 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                               <DownloadIcon className="h-4 w-4 text-orange-500" />
                             )}
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-9 w-9 p-0 hover:bg-indigo-50 hover:border-indigo-300"
                             onClick={() => handleVisualizarPDF(registro)}
                             title="Ver PDF"
                           >
                             <EyeIcon className="h-4 w-4 text-indigo-500" />
                           </Button>
-                          <Button 
-                            size="sm" 
-                            variant="outline" 
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-9 w-9 p-0 hover:bg-blue-50 hover:border-blue-300"
+                            onClick={() => handleEnviarEmail(registro)}
+                            disabled={enviandoEmail === registro.id}
+                            title={enviandoEmail === registro.id ? "Enviando..." : "Enviar Correo"}
+                          >
+                            {enviandoEmail === registro.id ? (
+                              <Loader2 className="h-4 w-4 text-blue-500 animate-spin" />
+                            ) : (
+                              <MailIcon className="h-4 w-4 text-blue-500" />
+                            )}
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
                             className="h-9 w-9 p-0 hover:bg-emerald-50 hover:border-emerald-300"
                             onClick={() => handleEditarRegistro(registro)}
                           >
@@ -456,7 +505,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
               </Table>
             </div>
           )}
-          
+
           {/* Paginación - Por ahora simple, se puede mejorar después */}
           {filteredRegistros.length > 0 && (
             <div className="mt-4">
@@ -479,14 +528,14 @@ export function DataTableClient({ registros }: DataTableClientProps) {
           )}
         </CardContent>
       </Card>
-      
-      <RegistroModal 
-        open={modalOpen} 
+
+      <RegistroModal
+        open={modalOpen}
         onOpenChange={handleCloseModal}
         registroParaEditar={registroParaEditar}
         modoEdicion={modoEdicion}
       />
-      
+
       <PDFNotificacionModal
         isOpen={modalNotificacionOpen}
         onClose={() => setModalNotificacionOpen(false)}
