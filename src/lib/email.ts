@@ -10,7 +10,7 @@ interface SendEmailValues {
 
 export async function sendEmail({ to, subject, text }: SendEmailValues) {
   await resend.emails.send({
-    from: "verification@codinginflow-sample.com",
+    from: "contacto@simetecsur.cl",
     to,
     subject,
     text,

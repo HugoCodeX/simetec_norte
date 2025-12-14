@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         // Enviar correo
         await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'SIMETEC SUR <notificaciones@defectos.simetecsur.cl>',
+            from: process.env.RESEND_FROM_EMAIL || 'SIMETEC SUR <contacto@simetecsur.cl>',
             to: email,
             subject: 'NOTIFICACIÓN // DEFECTO CRÍTICO',
             text: `Estimado/a,
