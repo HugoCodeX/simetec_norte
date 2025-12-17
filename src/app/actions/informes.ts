@@ -286,6 +286,8 @@ async function generarPDFInforme({
     try {
       if (!archivo) return null
       
+      console.log('[DEBUG] Procesando imagen:', archivo.substring(0, 100))
+      
       // Si es base64 (legacy)
       if (archivo.startsWith('data:image/')) {
         const commaIndex = archivo.indexOf(',')
@@ -294,20 +296,41 @@ async function generarPDFInforme({
         return Buffer.from(base64, 'base64')
       }
       
-      // Si es una URL (uploadthing), descargar la imagen
+      // Si es una URL (uploadthing u otra), descargar la imagen
       if (archivo.startsWith('http://') || archivo.startsWith('https://')) {
-        const response = await fetch(archivo)
+        let urlToFetch = archivo
+        
+        // Convertir URL de ufs.sh a utfs.io si es necesario (más estable)
+        // Formato ufs.sh: https://XXXXX.ufs.sh/f/KEY
+        // Formato utfs.io: https://utfs.io/f/KEY
+        if (archivo.includes('.ufs.sh/f/')) {
+          const keyMatch = archivo.match(/\.ufs\.sh\/f\/(.+)$/)
+          if (keyMatch && keyMatch[1]) {
+            urlToFetch = `https://utfs.io/f/${keyMatch[1]}`
+            console.log('[DEBUG] URL transformada a utfs.io:', urlToFetch)
+          }
+        }
+        
+        console.log('[DEBUG] Descargando imagen desde URL:', urlToFetch)
+        const response = await fetch(urlToFetch, {
+          headers: {
+            'Accept': 'image/*',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+          },
+        })
         if (!response.ok) {
-          console.error(`Error al descargar imagen: ${response.status}`)
+          console.error(`[ERROR] Error al descargar imagen: ${response.status} ${response.statusText}`)
           return null
         }
         const arrayBuffer = await response.arrayBuffer()
+        console.log('[DEBUG] Imagen descargada, tamaño:', arrayBuffer.byteLength, 'bytes')
         return Buffer.from(arrayBuffer)
       }
       
+      console.log('[DEBUG] Formato de archivo no reconocido')
       return null
     } catch (error) {
-      console.error('Error al obtener imagen:', error)
+      console.error('[ERROR] Error al obtener imagen:', error)
       return null
     }
   }
@@ -325,6 +348,9 @@ async function generarPDFInforme({
 
     // Filtrar solo gastos con imagen y descargar las imágenes
     const gastosConImagen = gastos.filter(g => g.archivo)
+    console.log('[DEBUG] Gastos con archivo:', gastosConImagen.length)
+    console.log('[DEBUG] URLs de archivos:', gastosConImagen.map(g => g.archivo))
+    
     const imagesPromises = gastosConImagen.map(async (g, i) => ({
       gasto: g,
       idx: gastos.indexOf(g) + 1,
@@ -334,7 +360,17 @@ async function generarPDFInforme({
     const imagesResults = await Promise.all(imagesPromises)
     const images = imagesResults.filter(x => !!x.buffer) as { gasto: any, idx: number, buffer: Buffer }[]
 
-    if (images.length === 0) return currentY
+    console.log('[DEBUG] Imágenes procesadas correctamente:', images.length)
+
+    if (images.length === 0) {
+      // Si no hay imágenes, mostrar mensaje
+      doc.font('Calibri-Bold').fontSize(12)
+        .text('COMPROBANTES', left, currentY)
+      currentY += 32
+      doc.font('Calibri').fontSize(10)
+        .text('No se encontraron imágenes de comprobantes disponibles.', left, currentY)
+      return currentY
+    }
 
     const drawTitle = (continuacion = false) => {
       doc.font('Calibri-Bold').fontSize(12)

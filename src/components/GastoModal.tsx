@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { crearGasto } from "@/app/actions/gastos"
 import { format } from "date-fns"
 import { useUploadThing } from "@/lib/uploadthing"
+import imageCompression from "browser-image-compression"
 
 
 interface Gasto {
@@ -76,6 +77,7 @@ interface FormErrors {
   item?: string
   descripcion?: string
   monto?: string
+  archivo?: string
 }
 
 export default function GastoModal({
@@ -98,15 +100,20 @@ export default function GastoModal({
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [isUploading, setIsUploading] = useState(false)
+  const [isCompressing, setIsCompressing] = useState(false)
+  const [compressionInfo, setCompressionInfo] = useState<{ original: number; compressed: number } | null>(null)
   const [uploadComplete, setUploadComplete] = useState(false)
 
   // Hook de uploadthing
   const { startUpload } = useUploadThing("gastoImage", {
     onClientUploadComplete: (res) => {
       if (res && res[0]) {
+        // Usar url en vez de ufsUrl para mejor compatibilidad
+        const fileUrl = res[0].url || res[0].ufsUrl
+        console.log('[DEBUG] URL de archivo subido:', fileUrl)
         setFormData(prev => ({
           ...prev,
-          archivoUrl: res[0].ufsUrl,
+          archivoUrl: fileUrl,
           archivoKey: res[0].key
         }))
         setUploadComplete(true)
@@ -137,6 +144,7 @@ export default function GastoModal({
       setErrors({})
       setSelectedFile(null)
       setUploadComplete(false)
+      setCompressionInfo(null)
     }
   }, [open])
 
@@ -163,6 +171,11 @@ export default function GastoModal({
         newErrors.monto = 'El monto debe ser un número válido'
       }
       // Permitir montos negativos y positivos
+    }
+
+    // Validar que se haya subido una foto
+    if (!formData.archivoUrl || !uploadComplete) {
+      newErrors.archivo = 'La foto del comprobante es obligatoria'
     }
 
     setErrors(newErrors)
@@ -196,10 +209,49 @@ export default function GastoModal({
 
       setSelectedFile(file)
       setUploadComplete(false)
-      setIsUploading(true)
+      setIsCompressing(true)
+      setCompressionInfo(null)
 
-      // Subir archivo a uploadthing
-      await startUpload([file])
+      try {
+        // Opciones de compresión
+        const compressionOptions = {
+          maxSizeMB: 1, // Tamaño máximo 1MB
+          maxWidthOrHeight: 1920, // Resolución máxima
+          useWebWorker: true,
+          fileType: file.type as 'image/jpeg' | 'image/png',
+          initialQuality: 0.8, // Calidad inicial 80%
+        }
+
+        const originalSize = file.size
+        toast.info('Comprimiendo imagen...')
+        
+        // Comprimir imagen
+        const compressedFile = await imageCompression(file, compressionOptions)
+        const compressedSize = compressedFile.size
+        
+        // Guardar info de compresión
+        setCompressionInfo({
+          original: originalSize,
+          compressed: compressedSize
+        })
+
+        const reduction = ((1 - compressedSize / originalSize) * 100).toFixed(0)
+        toast.success(`Imagen comprimida: ${reduction}% de reducción`)
+
+        setSelectedFile(compressedFile)
+        setIsCompressing(false)
+        setIsUploading(true)
+
+        // Subir archivo comprimido a uploadthing
+        await startUpload([compressedFile])
+      } catch (error) {
+        console.error('Error al comprimir imagen:', error)
+        toast.error('Error al comprimir la imagen, subiendo original...')
+        setIsCompressing(false)
+        setIsUploading(true)
+        // Si falla la compresión, subir el archivo original
+        await startUpload([file])
+      }
     }
   }
 
@@ -396,32 +448,34 @@ export default function GastoModal({
 
           {/* Archivo */}
           <div>
-            <Label htmlFor="archivo">Imagen de Comprobante</Label>
+            <Label htmlFor="archivo">Imagen de Comprobante *</Label>
             <div className="mt-2">
               {!selectedFile ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-gray-400 transition-colors">
+                <div className={`border-2 border-dashed rounded-lg p-8 text-center hover:border-gray-400 transition-colors ${errors.archivo ? 'border-red-500 bg-red-50' : 'border-gray-300'}`}>
                   <input
                     id="archivo"
                     type="file"
                     accept=".png,.jpg,.jpeg"
                     onChange={handleFileChange}
                     className="hidden"
-                    disabled={isUploading}
+                    disabled={isUploading || isCompressing}
                   />
                   <label htmlFor="archivo" className="cursor-pointer">
-                    <UploadIcon className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                    <p className="text-gray-600 font-medium mb-2">Haz clic para subir una imagen</p>
-                    <p className="text-sm text-gray-500">PNG, JPG hasta 16MB</p>
+                    <UploadIcon className={`mx-auto h-12 w-12 mb-4 ${errors.archivo ? 'text-red-400' : 'text-gray-400'}`} />
+                    <p className={`font-medium mb-2 ${errors.archivo ? 'text-red-600' : 'text-gray-600'}`}>Haz clic para subir una imagen</p>
+                    <p className="text-sm text-gray-500">PNG, JPG hasta 16MB (se comprimirá automáticamente)</p>
                   </label>
                 </div>
               ) : (
-                <div className={`border rounded-lg p-4 ${uploadComplete ? 'border-green-300 bg-green-50' : 'border-gray-300'}`}>
+                <div className={`border rounded-lg p-4 ${uploadComplete ? 'border-green-300 bg-green-50' : isCompressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isUploading ? 'bg-yellow-100' : uploadComplete ? 'bg-green-100' : 'bg-blue-100'
+                        isCompressing ? 'bg-blue-100' : isUploading ? 'bg-yellow-100' : uploadComplete ? 'bg-green-100' : 'bg-blue-100'
                       }`}>
-                        {isUploading ? (
+                        {isCompressing ? (
+                          <Loader2Icon className="h-5 w-5 text-blue-600 animate-spin" />
+                        ) : isUploading ? (
                           <Loader2Icon className="h-5 w-5 text-yellow-600 animate-spin" />
                         ) : uploadComplete ? (
                           <CheckCircleIcon className="h-5 w-5 text-green-600" />
@@ -433,6 +487,12 @@ export default function GastoModal({
                         <p className="text-sm font-medium text-gray-900">{selectedFile.name}</p>
                         <p className="text-xs text-gray-500">
                           {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+                          {compressionInfo && (
+                            <span className="text-green-600 ml-1">
+                              (reducido de {(compressionInfo.original / 1024 / 1024).toFixed(2)} MB)
+                            </span>
+                          )}
+                          {isCompressing && ' - Comprimiendo...'}
                           {isUploading && ' - Subiendo...'}
                           {uploadComplete && ' - ¡Subida completada!'}
                         </p>
@@ -446,11 +506,12 @@ export default function GastoModal({
                         setSelectedFile(null)
                         setFormData(prev => ({ ...prev, archivoUrl: '', archivoKey: '' }))
                         setUploadComplete(false)
+                        setCompressionInfo(null)
                         const input = document.getElementById('archivo') as HTMLInputElement
                         if (input) input.value = ''
                       }}
                       className="text-gray-400 hover:text-gray-600"
-                      disabled={isUploading}
+                      disabled={isUploading || isCompressing}
                     >
                       <XIcon className="h-4 w-4" />
                     </Button>
@@ -458,6 +519,12 @@ export default function GastoModal({
                 </div>
               )}
             </div>
+            {errors.archivo && (
+              <p className="text-sm text-red-500 flex items-center gap-1 mt-2">
+                <AlertCircleIcon className="h-3 w-3" />
+                {errors.archivo}
+              </p>
+            )}
           </div>
 
 
@@ -468,16 +535,16 @@ export default function GastoModal({
               type="button"
               variant="outline"
               onClick={handleCancelar}
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || isUploading || isCompressing}
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={isSubmitting || isUploading}
+              disabled={isSubmitting || isUploading || isCompressing}
               className="min-w-[120px]"
             >
-              {isSubmitting ? 'Creando...' : isUploading ? 'Subiendo imagen...' : 'Crear Gasto'}
+              {isSubmitting ? 'Creando...' : isCompressing ? 'Comprimiendo...' : isUploading ? 'Subiendo imagen...' : 'Crear Gasto'}
             </Button>
           </div>
         </form>

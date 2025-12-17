@@ -352,9 +352,26 @@ export async function eliminarGasto(id: string) {
       }
     }
 
-    // Eliminar gasto de la base de datos
-    await prisma.gasto.delete({
-      where: { id }
+    // Usar transacción para eliminar gasto y devolver dinero al usuario
+    await prisma.$transaction(async (tx) => {
+      // Eliminar gasto de la base de datos
+      await tx.gasto.delete({
+        where: { id }
+      })
+
+      // Devolver el dinero al usuario (incrementar su saldo)
+      // Si el gasto fue de 1000, el usuario tenía -1000, ahora debe tener 0
+      const usuarioActualizado = await tx.user.update({
+        where: { id: gastoExistente.userId },
+        data: {
+          dinero: {
+            increment: gastoExistente.monto
+          }
+        },
+        select: { dinero: true, name: true }
+      })
+
+      console.log(`[DEBUG] Gasto eliminado. Usuario ${usuarioActualizado.name} - Dinero devuelto: ${gastoExistente.monto}, Nuevo saldo: ${usuarioActualizado.dinero}`)
     })
 
     revalidatePath("/gastos")
