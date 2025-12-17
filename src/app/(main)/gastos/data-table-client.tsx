@@ -29,7 +29,7 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { DollarSignIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon, FileTextIcon, FileSpreadsheetIcon, X } from "lucide-react";
+import { DollarSignIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon, FileTextIcon, FileSpreadsheetIcon, X, Trash2Icon } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner"
@@ -67,7 +67,12 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
   const [informeModalOpen, setInformeModalOpen] = useState(false);
   const [historialExcelModalOpen, setHistorialExcelModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [gastoToDelete, setGastoToDelete] = useState<Gasto | null>(null);
+
+  const isAdmin = currentUser?.role === 'admin';
 
   // Filtrar gastos basado en el término de búsqueda
   const filteredGastos = gastos.filter((gasto) => {
@@ -113,6 +118,41 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
       style: 'currency',
       currency: 'CLP'
     }).format(monto);
+  };
+
+  // Función para abrir modal de confirmación de eliminación
+  const handleOpenDeleteModal = (gasto: Gasto) => {
+    if (!isAdmin) return;
+    setGastoToDelete(gasto);
+    setDeleteModalOpen(true);
+  };
+
+  // Función para cerrar modal de eliminación
+  const handleCloseDeleteModal = () => {
+    setDeleteModalOpen(false);
+    setGastoToDelete(null);
+  };
+
+  // Función para eliminar gasto (solo admin)
+  const handleConfirmDelete = async () => {
+    if (!isAdmin || !gastoToDelete) return;
+
+    setDeletingId(gastoToDelete.id);
+    try {
+      const result = await eliminarGasto(gastoToDelete.id);
+      if (result.success) {
+        toast.success('Gasto eliminado correctamente');
+        handleCloseDeleteModal();
+        window.location.reload();
+      } else {
+        toast.error(result.error || 'Error al eliminar el gasto');
+      }
+    } catch (error) {
+      console.error('Error al eliminar gasto:', error);
+      toast.error('Error interno del servidor');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -244,6 +284,20 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                         <span className="text-xs text-muted-foreground">Sin archivo</span>
                       )}
                     </div>
+                    {/* Botón eliminar solo para admin */}
+                    {isAdmin && (
+                      <div className="mt-4 pt-3 border-t flex justify-end">
+                        <Button
+                          variant="destructive"
+                          size="icon"
+                          onClick={() => handleOpenDeleteModal(gasto)}
+                          disabled={deletingId === gasto.id}
+                          title="Eliminar gasto"
+                        >
+                          <Trash2Icon className={`h-4 w-4 ${deletingId === gasto.id ? 'animate-spin' : ''}`} />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -259,7 +313,10 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DESCRIPCIÓN</TableHead>
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">USUARIO</TableHead>
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">MONTO</TableHead>
-                      <TableHead className="h-14 px-6 py-4 font-semibold text-left">ARCHIVO</TableHead>
+                      <TableHead className={`h-14 px-6 py-4 font-semibold text-left ${isAdmin ? 'border-r-2 border-border' : ''}`}>ARCHIVO</TableHead>
+                      {isAdmin && (
+                        <TableHead className="h-14 px-6 py-4 font-semibold text-center">ACCIONES</TableHead>
+                      )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -281,7 +338,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                         <TableCell className="h-16 px-6 py-4 border-r-2 border-border font-medium text-green-600">
                           {formatearMonto(gasto.monto)}
                         </TableCell>
-                        <TableCell className="h-16 px-6 py-4">
+                        <TableCell className={`h-16 px-6 py-4 ${isAdmin ? 'border-r-2 border-border' : ''}`}>
                           {gasto.archivo ? (
                             <div className="flex items-center gap-2">
                               {gasto.archivo.startsWith('data:image/') ? (
@@ -305,6 +362,19 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                             <span className="text-muted-foreground text-sm">Sin archivo</span>
                           )}
                         </TableCell>
+                        {isAdmin && (
+                          <TableCell className="h-16 px-6 py-4 text-center">
+                            <Button
+                              variant="destructive"
+                              size="icon"
+                              onClick={() => handleOpenDeleteModal(gasto)}
+                              disabled={deletingId === gasto.id}
+                              title="Eliminar gasto"
+                            >
+                              <Trash2Icon className={`h-4 w-4 ${deletingId === gasto.id ? 'animate-spin' : ''}`} />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>
@@ -381,6 +451,69 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                 />
               </div>
             )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal de confirmación para eliminar gasto */}
+      <Dialog open={deleteModalOpen} onOpenChange={handleCloseDeleteModal}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2Icon className="h-5 w-5" />
+              Confirmar eliminación
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              ¿Estás seguro de que deseas eliminar este gasto? Esta acción no se puede deshacer.
+            </p>
+            {gastoToDelete && (
+              <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Folio:</span>
+                  <span className="text-sm font-medium">{gastoToDelete.folio}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Item:</span>
+                  <span className="text-sm font-medium truncate max-w-[200px]">{gastoToDelete.item}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Monto:</span>
+                  <span className="text-sm font-medium text-green-600">{formatearMonto(gastoToDelete.monto)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted-foreground">Usuario:</span>
+                  <span className="text-sm font-medium">{gastoToDelete.usuario}</span>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-3">
+            <Button
+              variant="outline"
+              onClick={handleCloseDeleteModal}
+              disabled={deletingId !== null}
+            >
+              Cancelar
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmDelete}
+              disabled={deletingId !== null}
+            >
+              {deletingId !== null ? (
+                <>
+                  <span className="animate-spin mr-2">⏳</span>
+                  Eliminando...
+                </>
+              ) : (
+                <>
+                  <Trash2Icon className="h-4 w-4 mr-2" />
+                  Eliminar
+                </>
+              )}
+            </Button>
           </div>
         </DialogContent>
       </Dialog>
