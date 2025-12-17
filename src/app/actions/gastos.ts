@@ -5,6 +5,7 @@ import { getServerSession } from "@/lib/get-session"
 import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { UTApi } from "uploadthing/server"
+import * as XLSX from "xlsx"
 
 const utapi = new UTApi()
 
@@ -364,6 +365,261 @@ export async function eliminarGasto(id: string) {
     }
   } catch (error) {
     console.error("Error al eliminar gasto:", error)
+    if (error instanceof Error) {
+      return {
+        success: false,
+        error: error.message
+      }
+    }
+    return {
+      success: false,
+      error: "Error interno del servidor"
+    }
+  }
+}
+
+// Función para generar historial anual de gastos en Excel
+export async function generarHistorialAnualExcel(data: {
+  año: string
+}) {
+  try {
+    const session = await getServerSession()
+
+    if (!session?.user) {
+      return {
+        success: false,
+        error: "No autorizado"
+      }
+    }
+
+    // Solo administradores pueden generar el historial completo
+    if (session.user.role !== 'admin') {
+      return {
+        success: false,
+        error: "No tienes permisos para generar este reporte"
+      }
+    }
+
+    const año = parseInt(data.año)
+    const inicioAño = new Date(año, 0, 1) // 1 de enero
+    const finAño = new Date(año, 11, 31, 23, 59, 59) // 31 de diciembre
+
+    // Obtener todos los gastos del año con información del usuario
+    const gastos = await prisma.gasto.findMany({
+      where: {
+        fecha: {
+          gte: inicioAño,
+          lte: finAño
+        }
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            dinero: true
+          }
+        }
+      },
+      orderBy: [
+        { user: { name: 'asc' } },
+        { fecha: 'asc' }
+      ]
+    })
+
+    // Obtener todos los usuarios con sus datos
+    const usuarios = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        dinero: true,
+        role: true
+      },
+      orderBy: { name: 'asc' }
+    })
+
+    // Crear libro de Excel
+    const workbook = XLSX.utils.book_new()
+
+    // ===== HOJA 1: RESUMEN =====
+    const resumenData: (string | number)[][] = [
+      ['HISTORIAL ANUAL DE GASTOS ' + año],
+      ['Generado el: ' + new Date().toLocaleDateString('es-CL', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })],
+      [],
+      ['RESUMEN GENERAL'],
+      [],
+      ['Total de Gastos Registrados:', gastos.length],
+      ['Monto Total del Año:', gastos.reduce((sum, g) => sum + g.monto, 0)],
+      [],
+      ['RESUMEN POR USUARIO'],
+      [],
+      ['Usuario', 'Email', 'Rol', 'Cantidad de Gastos', 'Monto Total', 'Saldo Actual']
+    ]
+
+    // Agrupar gastos por usuario
+    const gastosPorUsuario = new Map<string, { gastos: typeof gastos, usuario: typeof usuarios[0] | null }>()
+    
+    usuarios.forEach(u => {
+      gastosPorUsuario.set(u.id, { gastos: [], usuario: u })
+    })
+
+    gastos.forEach(g => {
+      const userEntry = gastosPorUsuario.get(g.userId)
+      if (userEntry) {
+        userEntry.gastos.push(g)
+      } else {
+        gastosPorUsuario.set(g.userId, { 
+          gastos: [g], 
+          usuario: { 
+            id: g.userId, 
+            name: g.user.name, 
+            email: g.user.email, 
+            dinero: g.user.dinero,
+            role: null 
+          } 
+        })
+      }
+    })
+
+    // Agregar filas de resumen por usuario
+    gastosPorUsuario.forEach((data, userId) => {
+      const totalUsuario = data.gastos.reduce((sum, g) => sum + g.monto, 0)
+      resumenData.push([
+        data.usuario?.name || 'N/A',
+        data.usuario?.email || 'N/A',
+        data.usuario?.role || 'usuario',
+        data.gastos.length,
+        totalUsuario,
+        data.usuario?.dinero || 0
+      ])
+    })
+
+    const wsResumen = XLSX.utils.aoa_to_sheet(resumenData)
+    
+    // Ajustar anchos de columna para resumen
+    wsResumen['!cols'] = [
+      { wch: 30 }, // Usuario
+      { wch: 35 }, // Email
+      { wch: 12 }, // Rol
+      { wch: 20 }, // Cantidad
+      { wch: 18 }, // Monto Total
+      { wch: 15 }  // Saldo
+    ]
+    
+    XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen')
+
+    // ===== HOJA 2: DETALLE COMPLETO =====
+    const detalleHeaders = [
+      'Folio', 'Fecha', 'Usuario', 'Email', 'Item', 'Descripción', 'Monto'
+    ]
+    
+    const detalleData: (string | number | Date)[][] = [
+      ['DETALLE DE TODOS LOS GASTOS - AÑO ' + año],
+      [],
+      detalleHeaders
+    ]
+
+    gastos.forEach(g => {
+      detalleData.push([
+        g.folio,
+        new Date(g.fecha).toLocaleDateString('es-CL'),
+        g.user.name,
+        g.user.email,
+        g.item,
+        g.descripcion || 'Sin descripción',
+        g.monto
+      ])
+    })
+
+    // Agregar fila de totales
+    detalleData.push([])
+    detalleData.push(['', '', '', '', '', 'TOTAL:', gastos.reduce((sum, g) => sum + g.monto, 0)])
+
+    const wsDetalle = XLSX.utils.aoa_to_sheet(detalleData)
+    
+    // Ajustar anchos de columna para detalle
+    wsDetalle['!cols'] = [
+      { wch: 15 }, // Folio
+      { wch: 12 }, // Fecha
+      { wch: 25 }, // Usuario
+      { wch: 30 }, // Email
+      { wch: 30 }, // Item
+      { wch: 40 }, // Descripción
+      { wch: 15 }  // Monto
+    ]
+    
+    XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle Gastos')
+
+    // ===== HOJAS INDIVIDUALES POR USUARIO =====
+    gastosPorUsuario.forEach((data, userId) => {
+      if (data.gastos.length === 0) return // No crear hoja si no hay gastos
+
+      const nombreHoja = (data.usuario?.name || 'Usuario').substring(0, 28) // Limitar nombre de hoja a 31 caracteres
+      
+      const usuarioData: (string | number | Date)[][] = [
+        ['GASTOS DE: ' + (data.usuario?.name || 'N/A')],
+        ['Email: ' + (data.usuario?.email || 'N/A')],
+        ['Año: ' + año],
+        ['Saldo Actual: $' + (data.usuario?.dinero || 0).toLocaleString('es-CL')],
+        [],
+        ['Folio', 'Fecha', 'Item', 'Descripción', 'Monto']
+      ]
+
+      data.gastos.forEach(g => {
+        usuarioData.push([
+          g.folio,
+          new Date(g.fecha).toLocaleDateString('es-CL'),
+          g.item,
+          g.descripcion || 'Sin descripción',
+          g.monto
+        ])
+      })
+
+      // Totales del usuario
+      const totalUsuario = data.gastos.reduce((sum, g) => sum + g.monto, 0)
+      usuarioData.push([])
+      usuarioData.push(['', '', '', 'TOTAL:', totalUsuario])
+      usuarioData.push(['', '', '', 'CANTIDAD DE GASTOS:', data.gastos.length])
+
+      const wsUsuario = XLSX.utils.aoa_to_sheet(usuarioData)
+      
+      // Ajustar anchos de columna
+      wsUsuario['!cols'] = [
+        { wch: 15 }, // Folio
+        { wch: 12 }, // Fecha
+        { wch: 30 }, // Item
+        { wch: 40 }, // Descripción
+        { wch: 15 }  // Monto
+      ]
+
+      // Sanitizar nombre de hoja para evitar caracteres inválidos
+      const nombreHojaSanitizado = nombreHoja.replace(/[\\/*?[\]:]/g, '-')
+      
+      XLSX.utils.book_append_sheet(workbook, wsUsuario, nombreHojaSanitizado)
+    })
+
+    // Generar el archivo Excel como buffer
+    const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
+    
+    // Convertir a base64 para enviar al cliente
+    const excelBase64 = Buffer.from(excelBuffer).toString('base64')
+
+    return {
+      success: true,
+      excelBase64,
+      fileName: `historial-gastos-${año}.xlsx`
+    }
+
+  } catch (error) {
+    console.error('Error al generar historial anual:', error)
     if (error instanceof Error) {
       return {
         success: false,

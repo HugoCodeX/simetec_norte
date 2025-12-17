@@ -29,13 +29,14 @@ import {
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
-import { DollarSignIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon, FileTextIcon, X } from "lucide-react";
+import { DollarSignIcon, PlusIcon, SearchIcon, FileIcon, SettingsIcon, FileTextIcon, FileSpreadsheetIcon, X } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
 import { toast } from "sonner"
 import { eliminarGasto } from "@/app/actions/gastos"
 import GastoModal from "@/components/GastoModal"
 import InformeGastosModal from "@/components/InformeGastosModal"
+import HistorialAnualExcelModal from "@/components/HistorialAnualExcelModal"
 
 
 interface Gasto {
@@ -64,6 +65,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
   const [searchTerm, setSearchTerm] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [informeModalOpen, setInformeModalOpen] = useState(false);
+  const [historialExcelModalOpen, setHistorialExcelModalOpen] = useState(false);
   const [imageModalOpen, setImageModalOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
@@ -137,6 +139,14 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                   >
                     <FileTextIcon className="size-4" />
                     Generar Informe
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    className="flex items-center gap-2 w-full sm:w-auto border-green-500 text-green-600 hover:bg-green-50"
+                    onClick={() => setHistorialExcelModalOpen(true)}
+                  >
+                    <FileSpreadsheetIcon className="size-4" />
+                    Historial Anual Excel
                   </Button>
                   <Link href="/presupuestos">
                     <Button variant="outline" className="flex items-center gap-2 w-full sm:w-auto">
@@ -338,6 +348,11 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
       <InformeGastosModal
         open={informeModalOpen}
         onOpenChange={setInformeModalOpen}
+      />
+
+      <HistorialAnualExcelModal
+        open={historialExcelModalOpen}
+        onOpenChange={setHistorialExcelModalOpen}
       />
 
       {/* Modal para mostrar imagen en tamaño completo */}
