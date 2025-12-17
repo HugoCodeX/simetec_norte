@@ -9,11 +9,24 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, {
     provider: "postgresql",
   }),
-  trustedOrigins: ["http://localhost:3000", "http://localhost:3001"],
+  trustedOrigins: [
+    "http://localhost:3000", 
+    "http://localhost:3001",
+    process.env.BETTER_AUTH_URL || "",
+    process.env.NEXT_PUBLIC_APP_URL || "",
+  ].filter(Boolean),
   session: {
-    expiresIn: 60 * 60 * 24 * 15,
-    updateAge: 60 * 60 * 24,
-    freshAge: 60 * 30,
+    expiresIn: 60 * 60 * 24 * 30, // 30 días
+    updateAge: 60 * 60, // Actualizar sesión cada 1 hora (antes era cada día)
+    freshAge: 60 * 5, // 5 minutos
+    cookieCache: {
+      enabled: true,
+      maxAge: 60 * 5, // Cache de 5 minutos
+    },
+  },
+  advanced: {
+    cookiePrefix: "simetec",
+    useSecureCookies: process.env.NODE_ENV === "production",
   },
   emailAndPassword: {
     enabled: true,
