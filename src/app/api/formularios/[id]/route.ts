@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server'
 import prisma from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { verifyPreviewToken } from '@/lib/preview-token'
 import PDFDocument from 'pdfkit'
 import { join } from 'path'
 import { promises as fs } from 'fs'
@@ -8,13 +9,6 @@ import { promises as fs } from 'fs'
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     console.log('=== INICIO GENERACIÓN PDF ===')
-
-    // Verificar autenticación
-    const session = await auth.api.getSession({ headers: request.headers })
-    console.log('Sesión:', session?.user ? 'Autenticado' : 'No autenticado')
-    if (!session?.user) {
-      return new Response('No autorizado', { status: 401 })
-    }
 
     // Await params antes de usar sus propiedades
     const resolvedParams = await params
@@ -29,10 +23,31 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const formularioId = parseInt(resolvedParams.id)
     console.log('ID del formulario:', formularioId)
 
-    // Obtener parámetro de consulta para determinar si mostrar en línea o descargar
+    // Obtener parámetros de consulta
     const { searchParams } = new URL(request.url)
     const viewInline = searchParams.get('view') === 'inline'
+    const previewToken = searchParams.get('token')
     console.log('Modo de visualización:', viewInline ? 'En línea' : 'Descarga')
+
+    // Verificar autenticación O token temporal válido
+    let isAuthorized = false
+    
+    // Primero intentar verificar token temporal
+    if (previewToken) {
+      isAuthorized = verifyPreviewToken(previewToken, formularioId)
+      console.log('Token temporal:', isAuthorized ? 'Válido' : 'Inválido o expirado')
+    }
+    
+    // Si no hay token válido, verificar sesión normal
+    if (!isAuthorized) {
+      const session = await auth.api.getSession({ headers: request.headers })
+      isAuthorized = !!session?.user
+      console.log('Sesión:', isAuthorized ? 'Autenticado' : 'No autenticado')
+    }
+
+    if (!isAuthorized) {
+      return new Response('No autorizado', { status: 401 })
+    }
 
     // Buscar en la tabla de registros en lugar de formularios
     const registro = await prisma.registro.findUnique({

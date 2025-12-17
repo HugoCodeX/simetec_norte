@@ -34,6 +34,7 @@ import RegistroModal from "@/components/RegistroModal";
 import PDFNotificacionModal, { NotificacionData } from "@/components/PDFNotificacionModal";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
+import { generarEnlaceTemporal } from "@/app/actions/preview-links";
 // Removida importación de generarPDFRegistro - ahora usamos API route
 
 interface Registro {
@@ -68,6 +69,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [modoEdicion, setModoEdicion] = useState(false);
   const [descargandoPDF, setDescargandoPDF] = useState<number | null>(null);
   const [enviandoEmail, setEnviandoEmail] = useState<number | null>(null);
+  const [visualizandoPDF, setVisualizandoPDF] = useState<number | null>(null);
   const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<number>>(new Set());
   const [modalNotificacionOpen, setModalNotificacionOpen] = useState(false);
 
@@ -219,14 +221,28 @@ export function DataTableClient({ registros }: DataTableClientProps) {
     }
   };
 
-  // Función para visualizar PDF en nueva pestaña
+  // Función para visualizar PDF en nueva pestaña con enlace temporal
   const handleVisualizarPDF = async (registro: Registro) => {
+    setVisualizandoPDF(registro.id);
+    
     try {
-      const url = `/api/formularios/${registro.id}?view=inline`;
-      window.open(url, '_blank', 'noopener,noreferrer');
+      // Generar enlace temporal para compartir sin autenticación
+      const resultado = await generarEnlaceTemporal(registro.id, 60);
+      
+      if (resultado.success && resultado.enlace) {
+        window.open(resultado.enlace, '_blank', 'noopener,noreferrer');
+      } else {
+        // Fallback a la URL normal si falla
+        const url = `/api/formularios/${registro.id}?view=inline`;
+        window.open(url, '_blank', 'noopener,noreferrer');
+      }
     } catch (error) {
       console.error('Error al abrir PDF:', error);
-      alert('Error al abrir el PDF. Por favor, inténtalo de nuevo.');
+      // Fallback a la URL normal
+      const url = `/api/formularios/${registro.id}?view=inline`;
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } finally {
+      setVisualizandoPDF(null);
     }
   };
 
@@ -448,9 +464,14 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                             variant="outline"
                             className="h-9 w-9 p-0 hover:bg-indigo-50 hover:border-indigo-300"
                             onClick={() => handleVisualizarPDF(registro)}
-                            title="Ver PDF"
+                            disabled={visualizandoPDF === registro.id}
+                            title={visualizandoPDF === registro.id ? "Abriendo..." : "Ver PDF (enlace compartible)"}
                           >
-                            <EyeIcon className="h-4 w-4 text-indigo-500" />
+                            {visualizandoPDF === registro.id ? (
+                              <Loader2 className="h-4 w-4 text-indigo-500 animate-spin" />
+                            ) : (
+                              <EyeIcon className="h-4 w-4 text-indigo-500" />
+                            )}
                           </Button>
                           <Button
                             size="sm"
