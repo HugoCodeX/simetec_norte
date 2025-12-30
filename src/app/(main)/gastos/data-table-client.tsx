@@ -44,6 +44,7 @@ interface Gasto {
   folio: string;
   fecha: Date;
   item: string;
+  tipoDocumento: string;
   descripcion: string | null;
   usuario: string;
   monto: number;
@@ -80,6 +81,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
     return (
       gasto.folio.toLowerCase().includes(searchLower) ||
       gasto.item.toLowerCase().includes(searchLower) ||
+      gasto.tipoDocumento.toLowerCase().includes(searchLower) ||
       (gasto.descripcion && gasto.descripcion.toLowerCase().includes(searchLower)) ||
       gasto.usuario.toLowerCase().includes(searchLower) ||
       gasto.monto.toString().includes(searchLower)
@@ -172,16 +174,16 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
             <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
               {currentUser?.role === 'admin' && (
                 <>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex items-center gap-2 w-full sm:w-auto"
                     onClick={() => setInformeModalOpen(true)}
                   >
                     <FileTextIcon className="size-4" />
                     Generar Informe
                   </Button>
-                  <Button 
-                    variant="outline" 
+                  <Button
+                    variant="outline"
                     className="flex items-center gap-2 w-full sm:w-auto border-green-500 text-green-600 hover:bg-green-50"
                     onClick={() => setHistorialExcelModalOpen(true)}
                   >
@@ -196,7 +198,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                   </Link>
                 </>
               )}
-              <Button 
+              <Button
                 className="flex items-center gap-2 w-full sm:w-auto"
                 onClick={handleCrearGasto}
               >
@@ -219,7 +221,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
               />
             </div>
           </div>
-          
+
           {filteredGastos.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-muted-foreground">
@@ -241,6 +243,10 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                         <p className="text-xs text-muted-foreground">Fecha</p>
                         <p className="text-sm font-medium">{format(new Date(gasto.fecha), "dd/MM/yyyy")}</p>
                       </div>
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs text-muted-foreground">Tipo Documento</p>
+                      <p className="text-sm font-medium">{gasto.tipoDocumento === 'FACTURA' ? 'Factura' : 'Boleta'}</p>
                     </div>
                     <div className="mt-3">
                       <p className="text-xs text-muted-foreground">Item</p>
@@ -308,6 +314,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                   <TableHeader className="bg-muted/50">
                     <TableRow className="border-b-2 border-border">
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
+                      <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">TIPO DOC.</TableHead>
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ITEM</TableHead>
                       <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DESCRIPCIÓN</TableHead>
@@ -323,6 +330,9 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                     {filteredGastos.map((gasto) => (
                       <TableRow key={gasto.id} className="border-b hover:bg-muted/30 transition-colors">
                         <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{gasto.folio}</TableCell>
+                        <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
+                          {gasto.tipoDocumento === 'FACTURA' ? 'Factura' : 'Boleta'}
+                        </TableCell>
                         <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
                           {format(new Date(gasto.fecha), "dd/MM/yyyy")}
                         </TableCell>
@@ -342,9 +352,9 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                           {gasto.archivo ? (
                             <div className="flex items-center gap-2">
                               {gasto.archivo.startsWith('data:image/') ? (
-                                <img 
-                                  src={gasto.archivo} 
-                                  alt="Imagen del gasto" 
+                                <img
+                                  src={gasto.archivo}
+                                  alt="Imagen del gasto"
                                   className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
                                   onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
                                   title="Click para ver imagen completa"
@@ -382,7 +392,7 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
               </div>
             </>
           )}
-          
+
           {/* Paginación - Por ahora simple, se puede mejorar después */}
           {filteredGastos.length > 0 && (
             <div className="mt-4">
@@ -405,11 +415,11 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
           )}
         </CardContent>
       </Card>
-      
 
-      
-      <GastoModal 
-        open={modalOpen} 
+
+
+      <GastoModal
+        open={modalOpen}
         onOpenChange={handleCloseModal}
         currentUser={currentUser}
         onSuccess={handleSuccess}

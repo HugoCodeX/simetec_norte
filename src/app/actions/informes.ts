@@ -14,13 +14,14 @@ const informeSchema = z.object({
   mes: z.string().regex(/^(0[1-9]|1[0-2])$/, "Mes inválido"),
   año: z.string().regex(/^\d{4}$/, "Año inválido"),
   mesNombre: z.string().min(1, "El nombre del mes es requerido"),
-  numeroInforme: z.string().min(1, "El número de informe es requerido")
+  numeroInforme: z.string().min(1, "El número de informe es requerido"),
+  tipoDocumentoFiltro: z.enum(["TODOS", "FACTURA", "BOLETA"]).default("TODOS")
 })
 
 type InformeInput = z.infer<typeof informeSchema>
 
 // Función para obtener gastos filtrados por usuario y fecha
-export async function obtenerGastosPorUsuarioYFecha(usuarioId: string, mes: string, año: string) {
+export async function obtenerGastosPorUsuarioYFecha(usuarioId: string, mes: string, año: string, tipoDocumentoFiltro?: string) {
   try {
     const session = await getServerSession()
 
@@ -43,13 +44,19 @@ export async function obtenerGastosPorUsuarioYFecha(usuarioId: string, mes: stri
     const fechaInicio = new Date(`${año}-${mes}-01`)
     const fechaFin = new Date(parseInt(año), parseInt(mes), 0) // Último día del mes
 
+    // Construir filtro de tipo de documento
+    const tipoDocumentoWhere = tipoDocumentoFiltro && tipoDocumentoFiltro !== "TODOS"
+      ? { tipoDocumento: tipoDocumentoFiltro }
+      : {}
+
     const gastos = await prisma.gasto.findMany({
       where: {
         userId: usuarioId,
         fecha: {
           gte: fechaInicio,
           lte: fechaFin
-        }
+        },
+        ...tipoDocumentoWhere
       },
       orderBy: {
         fecha: 'asc'
@@ -137,8 +144,8 @@ async function generarPDFInforme({
   }
 
   // Crear documento PDF
-  const doc = new PDFDocument({ 
-    size: 'A4', 
+  const doc = new PDFDocument({
+    size: 'A4',
     margin: 40,
     font: fontRegular,
     info: {
@@ -159,41 +166,41 @@ async function generarPDFInforme({
 
   // Función para dibujar el encabezado
   const drawHeader = async () => {
-      // Logo
-      const logoPath = join(process.cwd(), 'public', 'logo.png')
-      try {
-        await fs.access(logoPath)
-        doc.image(logoPath, 40, 30, { width: 100 }) // Ajusta posición/tamaño según necesidad
-      } catch (e) {
-        // Si no existe el logo, no lo muestra
-        console.warn('Logo no encontrado:', e)
-      }
+    // Logo
+    const logoPath = join(process.cwd(), 'public', 'logo.png')
+    try {
+      await fs.access(logoPath)
+      doc.image(logoPath, 40, 30, { width: 100 }) // Ajusta posición/tamaño según necesidad
+    } catch (e) {
+      // Si no existe el logo, no lo muestra
+      console.warn('Logo no encontrado:', e)
+    }
 
-      // Título principal
-      doc.font('Calibri-Bold').fontSize(18).fillColor('black')
-        .text('RENDICIÓN DE GASTOS', 0, 60, { align: 'center' })
+    // Título principal
+    doc.font('Calibri-Bold').fontSize(18).fillColor('black')
+      .text('RENDICIÓN DE GASTOS', 0, 60, { align: 'center' })
 
-      // Número de informe
-      doc.font('Calibri').fontSize(12)
-        .text(`N° ${numeroInforme}`, 0, 85, { align: 'center' })
+    // Número de informe
+    doc.font('Calibri').fontSize(12)
+      .text(`N° ${numeroInforme}`, 0, 85, { align: 'center' })
 
-      // Información del trabajador y fecha
-      const fechaActual = new Date().toLocaleDateString('es-ES')
-      doc.font('Calibri-Bold').fontSize(11)
-        .text(`Nombre Trabajador(a): ${usuarioNombre}`, 50, 120)
-        .text(`Fecha: ${fechaActual}`, 400, 120)
+    // Información del trabajador y fecha
+    const fechaActual = new Date().toLocaleDateString('es-ES')
+    doc.font('Calibri-Bold').fontSize(11)
+      .text(`Nombre Trabajador(a): ${usuarioNombre}`, 50, 120)
+      .text(`Fecha: ${fechaActual}`, 400, 120)
 
-      // Información de fondos (usando datos reales del mes)
-      const fondoFormateado = fondoEntregado.toLocaleString('es-CL')
-      doc.font('Calibri').fontSize(10)
-        .text('Saldo inicial:', 50, 140)
-        .text(`Fondo entregado: ${fondoFormateado} Transferencia Cta. Cte. Empresa Scotiabank / Efectivo`, 200, 140)
+    // Información de fondos (usando datos reales del mes)
+    const fondoFormateado = fondoEntregado.toLocaleString('es-CL')
+    doc.font('Calibri').fontSize(10)
+      .text('Saldo inicial:', 50, 140)
+      .text(`Fondo entregado: ${fondoFormateado} Transferencia Cta. Cte. Empresa Scotiabank / Efectivo`, 200, 140)
 
-      // Descripción
-      doc.font('Calibri-Bold').fontSize(10)
-        .text('Descripción:', 50, 180)
-      doc.font('Calibri').fontSize(10)
-        .text(`Se rinden gastos de ${usuarioNombre} desde el inicio del mes hasta el fin del mes de ${mesNombre} ${año}`, 50, 195)
+    // Descripción
+    doc.font('Calibri-Bold').fontSize(10)
+      .text('Descripción:', 50, 180)
+    doc.font('Calibri').fontSize(10)
+      .text(`Se rinden gastos de ${usuarioNombre} desde el inicio del mes hasta el fin del mes de ${mesNombre} ${año}`, 50, 195)
   }
 
   // Función para dibujar la tabla
@@ -205,7 +212,7 @@ async function generarPDFInforme({
 
     // Encabezados de la tabla
     const headers = ['Fecha', 'Ref.', 'Concepto', 'Tipo Doc.', 'N° Doc.', 'Monto']
-    
+
     // Dibujar encabezados
     doc.font('Calibri-Bold').fontSize(9).fillColor('black')
     let currentX = tableLeft
@@ -226,7 +233,7 @@ async function generarPDFInforme({
         new Date(gasto.fecha).toLocaleDateString('es-ES'),
         String(idx + 1),
         gasto.item,
-        'Factura',
+        gasto.tipoDocumento === 'FACTURA' ? 'Factura' : 'Boleta',
         gasto.folio,
         gasto.monto.toLocaleString('es-ES')
       ]
@@ -258,7 +265,7 @@ async function generarPDFInforme({
     const totalLeft = 350
 
     doc.font('Calibri-Bold').fontSize(10)
-    
+
     // Total Gastos
     doc.text('Total Gastos', totalLeft, startY)
     doc.text(totalGastos.toLocaleString('es-CL'), totalLeft + 100, startY)
@@ -285,9 +292,9 @@ async function generarPDFInforme({
   const getImageBuffer = async (archivo: string): Promise<Buffer | null> => {
     try {
       if (!archivo) return null
-      
+
       console.log('[DEBUG] Procesando imagen:', archivo.substring(0, 100))
-      
+
       // Si es base64 (legacy)
       if (archivo.startsWith('data:image/')) {
         const commaIndex = archivo.indexOf(',')
@@ -295,11 +302,11 @@ async function generarPDFInforme({
         const base64 = archivo.slice(commaIndex + 1)
         return Buffer.from(base64, 'base64')
       }
-      
+
       // Si es una URL (uploadthing u otra), descargar la imagen
       if (archivo.startsWith('http://') || archivo.startsWith('https://')) {
         let urlToFetch = archivo
-        
+
         // Convertir URL de ufs.sh a utfs.io si es necesario (más estable)
         // Formato ufs.sh: https://XXXXX.ufs.sh/f/KEY
         // Formato utfs.io: https://utfs.io/f/KEY
@@ -310,7 +317,7 @@ async function generarPDFInforme({
             console.log('[DEBUG] URL transformada a utfs.io:', urlToFetch)
           }
         }
-        
+
         console.log('[DEBUG] Descargando imagen desde URL:', urlToFetch)
         const response = await fetch(urlToFetch, {
           headers: {
@@ -326,7 +333,7 @@ async function generarPDFInforme({
         console.log('[DEBUG] Imagen descargada, tamaño:', arrayBuffer.byteLength, 'bytes')
         return Buffer.from(arrayBuffer)
       }
-      
+
       console.log('[DEBUG] Formato de archivo no reconocido')
       return null
     } catch (error) {
@@ -350,13 +357,13 @@ async function generarPDFInforme({
     const gastosConImagen = gastos.filter(g => g.archivo)
     console.log('[DEBUG] Gastos con archivo:', gastosConImagen.length)
     console.log('[DEBUG] URLs de archivos:', gastosConImagen.map(g => g.archivo))
-    
+
     const imagesPromises = gastosConImagen.map(async (g, i) => ({
       gasto: g,
       idx: gastos.indexOf(g) + 1,
       buffer: await getImageBuffer(g.archivo)
     }))
-    
+
     const imagesResults = await Promise.all(imagesPromises)
     const images = imagesResults.filter(x => !!x.buffer) as { gasto: any, idx: number, buffer: Buffer }[]
 
@@ -484,7 +491,8 @@ export async function generarInformeGastos(data: InformeInput) {
     const gastosResult = await obtenerGastosPorUsuarioYFecha(
       validatedData.usuarioId,
       validatedData.mes,
-      validatedData.año
+      validatedData.año,
+      validatedData.tipoDocumentoFiltro
     )
 
     if (!gastosResult.success) {

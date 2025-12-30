@@ -16,6 +16,9 @@ const gastoSchema = z.object({
   item: z.string().min(1, "El item es requerido"),
   descripcion: z.string().optional(),
   monto: z.number(), // Permitir montos negativos y positivos
+  tipoDocumento: z.enum(["FACTURA", "BOLETA"], {
+    errorMap: () => ({ message: "El tipo de documento debe ser FACTURA o BOLETA" })
+  }),
   archivoUrl: z.string().optional(), // URL de uploadthing
   archivoKey: z.string().optional(), // Key para poder eliminar el archivo
 })
@@ -80,6 +83,7 @@ export async function crearGasto(data: {
   item: string
   descripcion?: string
   monto: number
+  tipoDocumento: string
   archivoUrl?: string
   archivoKey?: string
 }) {
@@ -100,6 +104,7 @@ export async function crearGasto(data: {
       item: data.item,
       descripcion: data.descripcion || undefined,
       monto: data.monto,
+      tipoDocumento: data.tipoDocumento,
       archivoUrl: data.archivoUrl,
       archivoKey: data.archivoKey
     }
@@ -113,13 +118,13 @@ export async function crearGasto(data: {
     console.log(`[DEBUG] Iniciando transacción para crear gasto`)
     const result = await prisma.$transaction(async (tx) => {
       console.log(`[DEBUG] Dentro de la transacción`)
-      
+
       // Obtener información del usuario antes de la transacción
       const usuarioAntes = await tx.user.findUnique({
         where: { id: session.user.id },
         select: { dinero: true, name: true }
       })
-      
+
       console.log(`[DEBUG] Usuario ${usuarioAntes?.name} - Dinero antes: ${usuarioAntes?.dinero}, Gasto: ${validatedData.monto}`)
 
       // Crear el gasto con la URL de uploadthing
@@ -131,6 +136,7 @@ export async function crearGasto(data: {
           item: validatedData.item,
           descripcion: validatedData.descripcion || null,
           monto: validatedData.monto,
+          tipoDocumento: validatedData.tipoDocumento,
           archivo: validatedData.archivoUrl || null,
           archivoKey: validatedData.archivoKey || null,
           userId: session.user.id
@@ -157,13 +163,13 @@ export async function crearGasto(data: {
         },
         select: { dinero: true, name: true }
       })
-      
+
       console.log(`[DEBUG] Usuario ${usuarioActualizado.name} - Dinero después: ${usuarioActualizado.dinero}`)
 
       console.log(`[DEBUG] Transacción completada exitosamente`)
       return gasto
     })
-    
+
     console.log(`[DEBUG] Transacción finalizada, resultado:`, result.id)
 
     revalidatePath('/gastos')
@@ -194,6 +200,7 @@ export async function actualizarGasto(id: string, data: {
   item: string
   descripcion?: string
   monto: number
+  tipoDocumento: string
   archivoUrl?: string
   archivoKey?: string
   mantenerArchivoExistente?: boolean
@@ -235,6 +242,7 @@ export async function actualizarGasto(id: string, data: {
       item: data.item,
       descripcion: data.descripcion || undefined,
       monto: data.monto,
+      tipoDocumento: data.tipoDocumento,
       archivoUrl: data.mantenerArchivoExistente ? gastoExistente.archivo : data.archivoUrl,
       archivoKey: data.mantenerArchivoExistente ? gastoExistente.archivoKey : data.archivoKey
     }
@@ -275,6 +283,7 @@ export async function actualizarGasto(id: string, data: {
         item: validatedData.item,
         descripcion: validatedData.descripcion || null,
         monto: validatedData.monto,
+        tipoDocumento: validatedData.tipoDocumento,
         archivo: validatedData.archivoUrl || null,
         archivoKey: validatedData.archivoKey || null
       },
@@ -463,9 +472,9 @@ export async function generarHistorialAnualExcel(data: {
     // ===== HOJA 1: RESUMEN =====
     const resumenData: (string | number)[][] = [
       ['HISTORIAL ANUAL DE GASTOS ' + año],
-      ['Generado el: ' + new Date().toLocaleDateString('es-CL', { 
-        year: 'numeric', 
-        month: 'long', 
+      ['Generado el: ' + new Date().toLocaleDateString('es-CL', {
+        year: 'numeric',
+        month: 'long',
         day: 'numeric',
         hour: '2-digit',
         minute: '2-digit'
@@ -483,7 +492,7 @@ export async function generarHistorialAnualExcel(data: {
 
     // Agrupar gastos por usuario
     const gastosPorUsuario = new Map<string, { gastos: typeof gastos, usuario: typeof usuarios[0] | null }>()
-    
+
     usuarios.forEach(u => {
       gastosPorUsuario.set(u.id, { gastos: [], usuario: u })
     })
@@ -493,15 +502,15 @@ export async function generarHistorialAnualExcel(data: {
       if (userEntry) {
         userEntry.gastos.push(g)
       } else {
-        gastosPorUsuario.set(g.userId, { 
-          gastos: [g], 
-          usuario: { 
-            id: g.userId, 
-            name: g.user.name, 
-            email: g.user.email, 
+        gastosPorUsuario.set(g.userId, {
+          gastos: [g],
+          usuario: {
+            id: g.userId,
+            name: g.user.name,
+            email: g.user.email,
             dinero: g.user.dinero,
-            role: null 
-          } 
+            role: null
+          }
         })
       }
     })
@@ -520,7 +529,7 @@ export async function generarHistorialAnualExcel(data: {
     })
 
     const wsResumen = XLSX.utils.aoa_to_sheet(resumenData)
-    
+
     // Ajustar anchos de columna para resumen
     wsResumen['!cols'] = [
       { wch: 30 }, // Usuario
@@ -530,14 +539,14 @@ export async function generarHistorialAnualExcel(data: {
       { wch: 18 }, // Monto Total
       { wch: 15 }  // Saldo
     ]
-    
+
     XLSX.utils.book_append_sheet(workbook, wsResumen, 'Resumen')
 
     // ===== HOJA 2: DETALLE COMPLETO =====
     const detalleHeaders = [
-      'Folio', 'Fecha', 'Usuario', 'Email', 'Item', 'Descripción', 'Monto'
+      'Folio', 'Fecha', 'Tipo Doc.', 'Usuario', 'Email', 'Item', 'Descripción', 'Monto'
     ]
-    
+
     const detalleData: (string | number | Date)[][] = [
       ['DETALLE DE TODOS LOS GASTOS - AÑO ' + año],
       [],
@@ -548,6 +557,7 @@ export async function generarHistorialAnualExcel(data: {
       detalleData.push([
         g.folio,
         new Date(g.fecha).toLocaleDateString('es-CL'),
+        g.tipoDocumento,
         g.user.name,
         g.user.email,
         g.item,
@@ -558,21 +568,22 @@ export async function generarHistorialAnualExcel(data: {
 
     // Agregar fila de totales
     detalleData.push([])
-    detalleData.push(['', '', '', '', '', 'TOTAL:', gastos.reduce((sum, g) => sum + g.monto, 0)])
+    detalleData.push(['', '', '', '', '', '', 'TOTAL:', gastos.reduce((sum, g) => sum + g.monto, 0)])
 
     const wsDetalle = XLSX.utils.aoa_to_sheet(detalleData)
-    
+
     // Ajustar anchos de columna para detalle
     wsDetalle['!cols'] = [
       { wch: 15 }, // Folio
       { wch: 12 }, // Fecha
+      { wch: 12 }, // Tipo Doc.
       { wch: 25 }, // Usuario
       { wch: 30 }, // Email
       { wch: 30 }, // Item
       { wch: 40 }, // Descripción
       { wch: 15 }  // Monto
     ]
-    
+
     XLSX.utils.book_append_sheet(workbook, wsDetalle, 'Detalle Gastos')
 
     // ===== HOJAS INDIVIDUALES POR USUARIO =====
@@ -580,20 +591,21 @@ export async function generarHistorialAnualExcel(data: {
       if (data.gastos.length === 0) return // No crear hoja si no hay gastos
 
       const nombreHoja = (data.usuario?.name || 'Usuario').substring(0, 28) // Limitar nombre de hoja a 31 caracteres
-      
+
       const usuarioData: (string | number | Date)[][] = [
         ['GASTOS DE: ' + (data.usuario?.name || 'N/A')],
         ['Email: ' + (data.usuario?.email || 'N/A')],
         ['Año: ' + año],
         ['Saldo Actual: $' + (data.usuario?.dinero || 0).toLocaleString('es-CL')],
         [],
-        ['Folio', 'Fecha', 'Item', 'Descripción', 'Monto']
+        ['Folio', 'Fecha', 'Tipo Doc.', 'Item', 'Descripción', 'Monto']
       ]
 
       data.gastos.forEach(g => {
         usuarioData.push([
           g.folio,
           new Date(g.fecha).toLocaleDateString('es-CL'),
+          g.tipoDocumento,
           g.item,
           g.descripcion || 'Sin descripción',
           g.monto
@@ -603,15 +615,16 @@ export async function generarHistorialAnualExcel(data: {
       // Totales del usuario
       const totalUsuario = data.gastos.reduce((sum, g) => sum + g.monto, 0)
       usuarioData.push([])
-      usuarioData.push(['', '', '', 'TOTAL:', totalUsuario])
-      usuarioData.push(['', '', '', 'CANTIDAD DE GASTOS:', data.gastos.length])
+      usuarioData.push(['', '', '', '', 'TOTAL:', totalUsuario])
+      usuarioData.push(['', '', '', '', 'CANTIDAD DE GASTOS:', data.gastos.length])
 
       const wsUsuario = XLSX.utils.aoa_to_sheet(usuarioData)
-      
+
       // Ajustar anchos de columna
       wsUsuario['!cols'] = [
         { wch: 15 }, // Folio
         { wch: 12 }, // Fecha
+        { wch: 12 }, // Tipo Doc.
         { wch: 30 }, // Item
         { wch: 40 }, // Descripción
         { wch: 15 }  // Monto
@@ -619,13 +632,13 @@ export async function generarHistorialAnualExcel(data: {
 
       // Sanitizar nombre de hoja para evitar caracteres inválidos
       const nombreHojaSanitizado = nombreHoja.replace(/[\\/*?[\]:]/g, '-')
-      
+
       XLSX.utils.book_append_sheet(workbook, wsUsuario, nombreHojaSanitizado)
     })
 
     // Generar el archivo Excel como buffer
     const excelBuffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' })
-    
+
     // Convertir a base64 para enviar al cliente
     const excelBase64 = Buffer.from(excelBuffer).toString('base64')
 

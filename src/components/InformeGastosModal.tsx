@@ -34,6 +34,7 @@ interface FormData {
   mes: string
   año: string
   numeroInforme: string
+  tipoDocumentoFiltro: string
 }
 
 interface FormErrors {
@@ -41,6 +42,7 @@ interface FormErrors {
   mes?: string
   año?: string
   numeroInforme?: string
+  tipoDocumentoFiltro?: string
 }
 
 const MESES = [
@@ -66,7 +68,8 @@ export default function InformeGastosModal({
     usuarioId: '',
     mes: '',
     año: new Date().getFullYear().toString(),
-    numeroInforme: ''
+    numeroInforme: '',
+    tipoDocumentoFiltro: 'TODOS'
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
@@ -83,7 +86,8 @@ export default function InformeGastosModal({
         usuarioId: '',
         mes: '',
         año: new Date().getFullYear().toString(),
-        numeroInforme: ''
+        numeroInforme: '',
+        tipoDocumentoFiltro: 'TODOS'
       })
       setErrors({})
     }
@@ -161,7 +165,8 @@ export default function InformeGastosModal({
         mes: formData.mes,
         año: formData.año,
         mesNombre,
-        numeroInforme: formData.numeroInforme.trim()
+        numeroInforme: formData.numeroInforme.trim(),
+        tipoDocumentoFiltro: formData.tipoDocumentoFiltro as "TODOS" | "FACTURA" | "BOLETA"
       })
 
       if (result.success && 'pdfUrl' in result && result.pdfUrl) {
@@ -172,7 +177,7 @@ export default function InformeGastosModal({
         document.body.appendChild(link)
         link.click()
         document.body.removeChild(link)
-        
+
         toast.success('Informe generado correctamente')
         onOpenChange(false)
       } else {
@@ -247,6 +252,30 @@ export default function InformeGastosModal({
               <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircleIcon className="h-3 w-3" />
                 {errors.numeroInforme}
+              </p>
+            )}
+          </div>
+
+          {/* Tipo de Documento Filtro */}
+          <div>
+            <Label htmlFor="tipoDocumentoFiltro">Tipo de Documento *</Label>
+            <Select
+              value={formData.tipoDocumentoFiltro}
+              onValueChange={(value) => handleInputChange('tipoDocumentoFiltro', value)}
+            >
+              <SelectTrigger className={errors.tipoDocumentoFiltro ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Selecciona tipo de documento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos (Facturas y Boletas)</SelectItem>
+                <SelectItem value="FACTURA">Solo Facturas</SelectItem>
+                <SelectItem value="BOLETA">Solo Boletas</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.tipoDocumentoFiltro && (
+              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircleIcon className="h-3 w-3" />
+                {errors.tipoDocumentoFiltro}
               </p>
             )}
           </div>

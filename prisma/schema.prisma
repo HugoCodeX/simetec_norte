@@ -118,18 +118,19 @@ model DefectoCritico {
 }
 
 model Gasto {
-  id          String   @id @default(cuid())
-  folio       String
-  fecha       DateTime
-  item        String
-  descripcion String?
-  monto       Float
-  archivo     String?  // URL del archivo en uploadthing
-  archivoKey  String?  // Key para eliminar el archivo de uploadthing
-  userId      String
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  id             String   @id @default(cuid())
+  folio          String
+  fecha          DateTime
+  item           String
+  descripcion    String?
+  monto          Float
+  tipoDocumento  String   @default("BOLETA") // "FACTURA" o "BOLETA"
+  archivo        String?  // URL del archivo en uploadthing
+  archivoKey     String?  // Key para eliminar el archivo de uploadthing
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   @@map("gasto")
 }

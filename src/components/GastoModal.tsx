@@ -65,6 +65,7 @@ interface FormData {
   folio: string
   fecha: string
   item: string
+  tipoDocumento: string
   descripcion: string
   monto: string
   archivoUrl: string
@@ -75,6 +76,7 @@ interface FormErrors {
   folio?: string
   fecha?: string
   item?: string
+  tipoDocumento?: string
   descripcion?: string
   monto?: string
   archivo?: string
@@ -90,6 +92,7 @@ export default function GastoModal({
     folio: '',
     fecha: format(new Date(), 'yyyy-MM-dd'),
     item: '',
+    tipoDocumento: '',
     descripcion: '',
     monto: '',
     archivoUrl: '',
@@ -136,6 +139,7 @@ export default function GastoModal({
         folio: '', // Folio en blanco para que el usuario lo ingrese
         fecha: format(new Date(), 'yyyy-MM-dd'),
         item: '',
+        tipoDocumento: '',
         descripcion: '',
         monto: '',
         archivoUrl: '',
@@ -161,6 +165,10 @@ export default function GastoModal({
 
     if (!formData.item.trim()) {
       newErrors.item = 'El item es requerido'
+    }
+
+    if (!formData.tipoDocumento.trim()) {
+      newErrors.tipoDocumento = 'El tipo de documento es requerido'
     }
 
     if (!formData.monto.trim()) {
@@ -224,11 +232,11 @@ export default function GastoModal({
 
         const originalSize = file.size
         toast.info('Comprimiendo imagen...')
-        
+
         // Comprimir imagen
         const compressedFile = await imageCompression(file, compressionOptions)
         const compressedSize = compressedFile.size
-        
+
         // Guardar info de compresión
         setCompressionInfo({
           original: originalSize,
@@ -276,6 +284,7 @@ export default function GastoModal({
         folio: formData.folio,
         fecha: formData.fecha,
         item: formData.item,
+        tipoDocumento: formData.tipoDocumento,
         descripcion: formData.descripcion || undefined,
         monto: parseFloat(formData.monto),
         archivoUrl: formData.archivoUrl || undefined,
@@ -302,6 +311,7 @@ export default function GastoModal({
       folio: '',
       fecha: format(new Date(), 'yyyy-MM-dd'),
       item: '',
+      tipoDocumento: '',
       descripcion: '',
       monto: '',
       archivoUrl: '',
@@ -392,6 +402,26 @@ export default function GastoModal({
             )}
           </div>
 
+          {/* Tipo de Documento */}
+          <div>
+            <Label htmlFor="tipoDocumento">Tipo de Documento *</Label>
+            <Select value={formData.tipoDocumento} onValueChange={(value) => handleInputChange('tipoDocumento', value)}>
+              <SelectTrigger className={errors.tipoDocumento ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Selecciona el tipo de documento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="FACTURA">Factura</SelectItem>
+                <SelectItem value="BOLETA">Boleta</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.tipoDocumento && (
+              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircleIcon className="h-3 w-3" />
+                {errors.tipoDocumento}
+              </p>
+            )}
+          </div>
+
           {/* Descripción */}
           <div>
             <Label htmlFor="descripcion">Descripción</Label>
@@ -470,9 +500,8 @@ export default function GastoModal({
                 <div className={`border rounded-lg p-4 ${uploadComplete ? 'border-green-300 bg-green-50' : isCompressing ? 'border-blue-300 bg-blue-50' : 'border-gray-300'}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        isCompressing ? 'bg-blue-100' : isUploading ? 'bg-yellow-100' : uploadComplete ? 'bg-green-100' : 'bg-blue-100'
-                      }`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isCompressing ? 'bg-blue-100' : isUploading ? 'bg-yellow-100' : uploadComplete ? 'bg-green-100' : 'bg-blue-100'
+                        }`}>
                         {isCompressing ? (
                           <Loader2Icon className="h-5 w-5 text-blue-600 animate-spin" />
                         ) : isUploading ? (
