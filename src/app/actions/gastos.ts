@@ -16,9 +16,7 @@ const gastoSchema = z.object({
   item: z.string().min(1, "El item es requerido"),
   descripcion: z.string().optional(),
   monto: z.number(), // Permitir montos negativos y positivos
-  tipoDocumento: z.enum(["FACTURA", "BOLETA"], {
-    errorMap: () => ({ message: "El tipo de documento debe ser FACTURA o BOLETA" })
-  }),
+  tipoDocumento: z.enum(["FACTURA", "BOLETA"]),
   archivoUrl: z.string().optional(), // URL de uploadthing
   archivoKey: z.string().optional(), // Key para poder eliminar el archivo
 })
