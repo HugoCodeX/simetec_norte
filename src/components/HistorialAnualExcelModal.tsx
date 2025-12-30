@@ -22,10 +22,12 @@ interface HistorialAnualExcelModalProps {
 
 interface FormData {
   año: string
+  tipoDocumento: string
 }
 
 interface FormErrors {
   año?: string
+  tipoDocumento?: string
 }
 
 export default function HistorialAnualExcelModal({
@@ -33,7 +35,8 @@ export default function HistorialAnualExcelModal({
   onOpenChange
 }: HistorialAnualExcelModalProps) {
   const [formData, setFormData] = useState<FormData>({
-    año: new Date().getFullYear().toString()
+    año: new Date().getFullYear().toString(),
+    tipoDocumento: 'TODOS'
   })
 
   const [errors, setErrors] = useState<FormErrors>({})
@@ -43,7 +46,8 @@ export default function HistorialAnualExcelModal({
   useEffect(() => {
     if (open) {
       setFormData({
-        año: new Date().getFullYear().toString()
+        año: new Date().getFullYear().toString(),
+        tipoDocumento: 'TODOS'
       })
       setErrors({})
     }
@@ -83,7 +87,8 @@ export default function HistorialAnualExcelModal({
 
     try {
       const result = await generarHistorialAnualExcel({
-        año: formData.año
+        año: formData.año,
+        tipoDocumento: formData.tipoDocumento
       })
 
       if (result.success && result.excelBase64) {
@@ -94,10 +99,10 @@ export default function HistorialAnualExcelModal({
           byteNumbers[i] = byteCharacters.charCodeAt(i)
         }
         const byteArray = new Uint8Array(byteNumbers)
-        const blob = new Blob([byteArray], { 
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+        const blob = new Blob([byteArray], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         })
-        
+
         // Crear enlace de descarga
         const url = window.URL.createObjectURL(blob)
         const link = document.createElement('a')
@@ -107,7 +112,7 @@ export default function HistorialAnualExcelModal({
         link.click()
         document.body.removeChild(link)
         window.URL.revokeObjectURL(url)
-        
+
         toast.success(`Historial ${formData.año} generado correctamente`)
         onOpenChange(false)
       } else {
@@ -164,6 +169,30 @@ export default function HistorialAnualExcelModal({
               <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
                 <AlertCircleIcon className="h-3 w-3" />
                 {errors.año}
+              </p>
+            )}
+          </div>
+
+          {/* Tipo de Documento */}
+          <div>
+            <Label htmlFor="tipoDocumento">Tipo de Documento *</Label>
+            <Select
+              value={formData.tipoDocumento}
+              onValueChange={(value) => handleInputChange('tipoDocumento', value)}
+            >
+              <SelectTrigger className={errors.tipoDocumento ? 'border-red-500' : ''}>
+                <SelectValue placeholder="Selecciona tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TODOS">Todos</SelectItem>
+                <SelectItem value="BOLETA">Solo Boletas</SelectItem>
+                <SelectItem value="FACTURA">Solo Facturas</SelectItem>
+              </SelectContent>
+            </Select>
+            {errors.tipoDocumento && (
+              <p className="text-sm text-red-500 flex items-center gap-1 mt-1">
+                <AlertCircleIcon className="h-3 w-3" />
+                {errors.tipoDocumento}
               </p>
             )}
           </div>

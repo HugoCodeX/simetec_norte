@@ -405,6 +405,7 @@ export async function eliminarGasto(id: string) {
 // Función para generar historial anual de gastos en Excel
 export async function generarHistorialAnualExcel(data: {
   año: string
+  tipoDocumento?: string
 }) {
   try {
     const session = await getServerSession()
@@ -428,13 +429,19 @@ export async function generarHistorialAnualExcel(data: {
     const inicioAño = new Date(año, 0, 1) // 1 de enero
     const finAño = new Date(año, 11, 31, 23, 59, 59) // 31 de diciembre
 
+    // Construir filtro de tipo de documento
+    const tipoDocumentoFilter = data.tipoDocumento && data.tipoDocumento !== 'TODOS'
+      ? { tipoDocumento: data.tipoDocumento }
+      : {}
+
     // Obtener todos los gastos del año con información del usuario
     const gastos = await prisma.gasto.findMany({
       where: {
         fecha: {
           gte: inicioAño,
           lte: finAño
-        }
+        },
+        ...tipoDocumentoFilter
       },
       include: {
         user: {
@@ -467,9 +474,13 @@ export async function generarHistorialAnualExcel(data: {
     // Crear libro de Excel
     const workbook = XLSX.utils.book_new()
 
+    // Determinar texto del filtro para los títulos
+    const tipoDocTexto = data.tipoDocumento === 'BOLETA' ? ' - SOLO BOLETAS' :
+      data.tipoDocumento === 'FACTURA' ? ' - SOLO FACTURAS' : ''
+
     // ===== HOJA 1: RESUMEN =====
     const resumenData: (string | number)[][] = [
-      ['HISTORIAL ANUAL DE GASTOS ' + año],
+      ['HISTORIAL ANUAL DE GASTOS ' + año + tipoDocTexto],
       ['Generado el: ' + new Date().toLocaleDateString('es-CL', {
         year: 'numeric',
         month: 'long',
@@ -546,7 +557,7 @@ export async function generarHistorialAnualExcel(data: {
     ]
 
     const detalleData: (string | number | Date)[][] = [
-      ['DETALLE DE TODOS LOS GASTOS - AÑO ' + año],
+      ['DETALLE DE TODOS LOS GASTOS - AÑO ' + año + tipoDocTexto],
       [],
       detalleHeaders
     ]
