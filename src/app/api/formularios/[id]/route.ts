@@ -74,24 +74,14 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Sello eliminado - no se usa
     let selloBuffer: Buffer | null = null
 
-    // Cargar firma de SIMETEC
-    const firmaSimetecPath = join(process.cwd(), 'public', 'firmasimetec.png')
-    let firmaSimetecBuffer: Buffer | null = null
+    // Cargar firma de SIMETEC (firma.jpg)
+    const firmaPath = join(process.cwd(), 'public', 'firma.jpg')
+    let firmaBuffer: Buffer | null = null
     try {
-      firmaSimetecBuffer = await fs.readFile(firmaSimetecPath)
+      firmaBuffer = await fs.readFile(firmaPath)
     } catch (e) {
       console.error('Error al cargar firma SIMETEC:', e)
-      firmaSimetecBuffer = null
-    }
-
-    // Cargar timbre de SIMETEC
-    const timbrePath = join(process.cwd(), 'public', 'TIMBRE.png')
-    let timbreBuffer: Buffer | null = null
-    try {
-      timbreBuffer = await fs.readFile(timbrePath)
-    } catch (e) {
-      console.error('Error al cargar timbre SIMETEC:', e)
-      timbreBuffer = null
+      firmaBuffer = null
     }
 
     // Verificar que las fuentes existen antes de crear el documento
@@ -260,9 +250,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Texto en el cuadrito principal con tamaños específicos - más compacto
-    doc.font('Arial-Bold').fontSize(11).fillColor('black').text('ENTIDAD DE CERTIFICACIÓN SIMETEC SUR LTDA', 40, 48, { align: 'center', width: 360 })
-    doc.font('Calibri').fontSize(8).fillColor('black').text('FONO: +56 9 7852 6677 / +56 9 4549 9284', 40, 65, { align: 'center', width: 360 })
-    doc.font('Calibri').fontSize(11).fillColor('blue').text('contacto@simetecsur.cl', 40, 78, { align: 'center', width: 360, link: 'mailto:contacto@simetecsur.cl', underline: true })
+    doc.font('Arial-Bold').fontSize(11).fillColor('black').text('ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA', 40, 48, { align: 'center', width: 360 })
+    doc.font('Calibri').fontSize(8).fillColor('black').text('FONO: +56 9 9832 7807', 40, 65, { align: 'center', width: 360 })
+    doc.font('Calibri').fontSize(11).fillColor('blue').text('info@simetec-chile.cl', 40, 78, { align: 'center', width: 360, link: 'mailto:info@simetec-chile.cl', underline: true })
 
     // Línea divisoria dentro del cuadrito principal - más compacta
     doc.moveTo(40, 88).lineTo(400, 88).stroke()
@@ -459,26 +449,21 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     const firmaSimetecX = tableX + 280
     const firmaSimetecY = firmaY
     const firmaSimetecWidth = 150
-    const firmaSimetecHeight = 140
+    const firmaSimetecHeight = 120
 
-    if (firmaSimetecBuffer) {
-      doc.image(firmaSimetecBuffer, firmaSimetecX, firmaSimetecY, { width: firmaSimetecWidth, height: firmaSimetecHeight })
-    }
-
-    // Timbre más grande y más a la izquierda
-    if (timbreBuffer) {
-      doc.image(timbreBuffer, firmaSimetecX + firmaSimetecWidth - 40, firmaSimetecY - 5, { width: 170, height: 170 })
+    if (firmaBuffer) {
+      doc.image(firmaBuffer, firmaSimetecX, firmaSimetecY, { width: firmaSimetecWidth, height: firmaSimetecHeight })
     }
 
     // Información completa de la entidad certificadora centrada con menos espaciado
     const textoWidth = 150
-    const etiquetaSimetecY = firmaSimetecY + firmaSimetecHeight - 15
+    const etiquetaSimetecY = firmaSimetecY + firmaSimetecHeight + 3
     doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Firma Entidad Certificadora', firmaSimetecX, etiquetaSimetecY, { width: textoWidth, align: 'center' })
-    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Simetec Sur LTDA', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true })
-    doc.font('Calibri').fontSize(10).fillColor('black').text('RUT 77.481.726-3', firmaSimetecX, etiquetaSimetecY + 24, { width: textoWidth, align: 'center' })
+    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Simetec LTDA', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true })
+    doc.font('Calibri').fontSize(10).fillColor('black').text('RUT 76.001.876-7', firmaSimetecX, etiquetaSimetecY + 24, { width: textoWidth, align: 'center' })
     doc.font('Calibri').fontSize(10).fillColor('black').text('Representante Legal', firmaSimetecX, etiquetaSimetecY + 36, { width: textoWidth, align: 'center', underline: true })
-    doc.font('Calibri').fontSize(10).fillColor('black').text('Leandro J. Soto Bustos', firmaSimetecX, etiquetaSimetecY + 48, { width: textoWidth, align: 'center' })
-    doc.font('Calibri').fontSize(10).fillColor('black').text('RUN 15.660.070-9', firmaSimetecX, etiquetaSimetecY + 60, { width: textoWidth, align: 'center' })
+    doc.font('Calibri').fontSize(10).fillColor('black').text('Danilo E. Ruiz Johns', firmaSimetecX, etiquetaSimetecY + 48, { width: textoWidth, align: 'center' })
+    doc.font('Calibri').fontSize(10).fillColor('black').text('RUN 13.432.595-K', firmaSimetecX, etiquetaSimetecY + 60, { width: textoWidth, align: 'center' })
 
     // Sin información del inspector
 

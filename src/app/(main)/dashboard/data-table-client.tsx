@@ -408,8 +408,9 @@ export function DataTableClient({ registros }: DataTableClientProps) {
               <Table className="border-separate border-spacing-0">
                 <TableHeader className="bg-muted/50">
                   <TableRow className="border-b-2 border-border">
-                    <TableHead className="h-14 px-4 py-4 font-semibold text-center border-r-2 border-border w-12">
+                    <TableHead className="h-14 pl-6 pr-8 py-4 font-semibold text-center border-r-2 border-border w-12">
                       <Checkbox
+                        className="mr-4"
                         checked={filteredRegistros.length > 0 && filteredRegistros.every(r => registrosSeleccionados.has(r.id))}
                         onCheckedChange={handleSeleccionarTodos}
                         aria-label="Seleccionar todos"
@@ -435,8 +436,9 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                 <TableBody>
                   {filteredRegistros.map((registro) => (
                     <TableRow key={registro.id} className="border-b hover:bg-muted/30 transition-colors">
-                      <TableCell className="h-16 px-4 py-4 text-center border-r-2 border-border">
+                      <TableCell className="h-16 pl-6 pr-8 py-4 text-center border-r-2 border-border">
                         <Checkbox
+                          className="mr-4"
                           checked={registrosSeleccionados.has(registro.id)}
                           onCheckedChange={() => handleSeleccionarRegistro(registro.id)}
                           aria-label={`Seleccionar registro ${registro.folio}`}

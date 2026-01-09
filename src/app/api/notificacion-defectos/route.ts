@@ -210,7 +210,7 @@ export async function GET(request: NextRequest) {
         ['ORGANISMO DE INSPECCIÓN', 'Simetec Sur Ltda.'],
         ['DIRECCIÓN', 'Av. O\'Higgins # 491 Of 33, Concepción, Edificio O\'Higgins'],
         ['RUT', '77.481.726-3'],
-        ['E-MAIL', 'contacto@simetecsur.cl'],
+        ['E-MAIL', 'info@simetec-chile.cl'],
         ['FONO', '9 7852 6677']
       ];
 

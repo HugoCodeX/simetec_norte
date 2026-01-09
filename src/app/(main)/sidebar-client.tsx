@@ -8,7 +8,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { MenuIcon, XIcon } from "lucide-react";
 import Image from "next/image";
-import logo from "@/assets/logo.png";
+import logo from "@/assets/logoo.png";
 import { authClient } from "@/lib/auth-client";
 import { toast } from "sonner";
 
@@ -99,14 +99,14 @@ export function SidebarClient({ navItems, className }: SidebarClientProps) {
                 <Image
                   src={logo}
                   alt="SIMETEC Logo"
-                  width={60}
-                  height={60}
+                  width={80}
+                  height={80}
                   className="rounded-lg shadow-md group-hover:shadow-lg transition-shadow duration-200"
                 />
                 <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full border-2 border-background"></div>
               </div>
               <div className="text-center">
-                <h1 className="font-bold text-lg text-foreground">Simetec Sur Ltda.</h1>
+                <h1 className="font-bold text-lg text-foreground">Simetec Ltda.</h1>
               </div>
             </Link>
           </div>

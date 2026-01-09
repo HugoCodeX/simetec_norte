@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 
         // Enviar correo
         await resend.emails.send({
-            from: process.env.RESEND_FROM_EMAIL || 'SIMETEC SUR <contacto@simetecsur.cl>',
+            from: process.env.RESEND_FROM_EMAIL || 'SIMETEC <info@simetec-chile.cl>',
             to: email,
             subject: 'NOTIFICACIÓN // DEFECTO CRÍTICO',
             text: `Estimado/a,
@@ -47,7 +47,7 @@ Junto con saludar, adjunto envío notificación por defecto crítico encontrado 
 
 Saludos cordiales,
 
-Equipo Simetesur
+Equipo Simetec
 F: 9 7852 6677 / 9 3864 8144`,
             attachments: [
                 {
