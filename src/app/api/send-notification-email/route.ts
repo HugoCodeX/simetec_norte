@@ -48,7 +48,7 @@ Junto con saludar, adjunto envío notificación por defecto crítico encontrado 
 Saludos cordiales,
 
 Equipo Simetec
-F: 9 7852 6677 / 9 3864 8144`,
+F: +56 9 9832 7807`,
             attachments: [
                 {
                     filename: `notificacion_defectos_${registro.folio}.pdf`,
