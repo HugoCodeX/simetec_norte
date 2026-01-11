@@ -11,7 +11,9 @@ export default function GuestAccessPage() {
 
   const handleSignOut = async () => {
     await authClient.signOut();
-    router.push("/");
+    // Limpiar caché y reemplazar historial para evitar volver atrás
+    router.refresh();
+    window.location.replace("/");
   };
 
   return (

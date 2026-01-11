@@ -84,7 +84,9 @@ export function SidebarClient({ navItems, className }: SidebarClientProps) {
       toast.error(error.message || "Algo salió mal");
     } else {
       toast.success("Sesión cerrada exitosamente");
-      router.push("/");
+      // Limpiar caché y reemplazar historial para evitar volver atrás
+      router.refresh();
+      window.location.replace("/");
     }
   }
 

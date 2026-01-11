@@ -74,7 +74,9 @@ function SignOutItem() {
       toast.error(error.message || "Something went wrong");
     } else {
       toast.success("Sesión cerrada");
-      router.push("/");
+      // Limpiar caché y reemplazar historial para evitar volver atrás
+      router.refresh();
+      window.location.replace("/");
     }
   }
 
