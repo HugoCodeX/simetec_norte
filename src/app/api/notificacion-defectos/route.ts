@@ -207,11 +207,11 @@ export async function GET(request: NextRequest) {
       
       // Primera tabla: Información de SIMETEC
       const simetecData = [
-        ['ORGANISMO DE INSPECCIÓN', 'Simetec Sur Ltda.'],
-        ['DIRECCIÓN', 'Av. O\'Higgins # 491 Of 33, Concepción, Edificio O\'Higgins'],
-        ['RUT', '77.481.726-3'],
+        ['ORGANISMO DE INSPECCIÓN', 'Simetec Ltda.'],
+        ['DIRECCIÓN', 'Calle Limache #1724 Edificio Contemporáneo Oficina 704, Viña del Mar'],
+        ['RUT', '76.001.876-7'],
         ['E-MAIL', 'info@simetec-chile.cl'],
-        ['FONO', '9 7852 6677']
+        ['FONO', '9 9832 7807']
       ];
 
       simetecData.forEach((row, index) => {
@@ -462,7 +462,7 @@ export async function GET(request: NextRequest) {
        doc.font('Arial-Bold')
           .fontSize(12)
           .fillColor('#000000')
-          .text('LEANDRO SOTO', rightX - 85, lineY + 10, {
+          .text('Danilo E. Ruiz Johns', rightX - 85, lineY + 10, {
             width: 230,
             align: 'center'
           });
@@ -482,23 +482,23 @@ export async function GET(request: NextRequest) {
         doc.font('Arial')
            .fontSize(9)
            .fillColor('#000000')
-           .text('Dirección: Av. Libertador Bernardo O\'Higgins # 491 of 33, Concepción', 50, contactY, {
+           .text('Calle Limache #1724 Edificio Contemporáneo Oficina 704, Viña del Mar', 50, contactY, {
              width: 500,
              align: 'center'
            });
         
         // Teléfonos
-        doc.text('Fono: 9 7852 6677 / 9 3864 8144 / 9 4549 9284', 50, contactY + 15, {
+        doc.text('Fono: 9 9832 7807 ', 50, contactY + 15, {
              width: 500,
              align: 'center'
            });
         
         // Website
         doc.fillColor('#0000FF')
-           .text('www.simetecsur.cl', 50, contactY + 30, {
+           .text('www.simetec-chile.cl', 50, contactY + 30, {
              width: 500,
              align: 'center',
-             link: 'http://www.simetecsur.cl'
+             link: 'https://simetec-chile.cl'
            });
     };
 
