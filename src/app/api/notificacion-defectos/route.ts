@@ -295,117 +295,92 @@ export async function GET(request: NextRequest) {
     // Función para dibujar la tabla de defectos
     const drawDefectosTable = (startY: number) => {
       let yPos = startY;
+      const totalWidth = 515;
+      const leftMargin = 50;
       
-      // Encabezados de la tabla
-      const headers = ['TORRE', 'UNIDAD', 'DEFECTO', 'N° MEDIDOR', 'N°\nREPORTE'];
-      const columnWidths = [60, 60, 245, 80, 70];
-      let xPos = 50;
-      
-      // Dibujar encabezados con color verde pálido
-      doc.rect(50, yPos, 515, 25)
-         .fillAndStroke('#E8F5E8', '#000000');
-      
-      headers.forEach((header, index) => {
-        doc.font('Arial-Bold')
-           .fontSize(9)
-           .fillColor('#000000');
-        
-        if (index === 4) {
-          // Para "N° REPORTE", dividir en dos líneas
-          doc.text('N°', xPos + 3, yPos + 3, {
-             width: columnWidths[index] - 6,
-             align: 'center'
-           });
-          doc.text('REPORTE', xPos + 3, yPos + 13, {
-             width: columnWidths[index] - 6,
-             align: 'center'
-           });
+      // Dibujar cada registro como una tarjeta/bloque
+      registrosTransformados.forEach((registro, registroIndex) => {
+        // Preparar los defectos
+        let defectosArray: string[] = [];
+        if (registro.defectosCriticos && registro.defectosCriticos.length > 0) {
+          defectosArray = registro.defectosCriticos.map((defecto) => {
+            const defectoTexto = defecto.tipo || 'Defecto crítico detectado';
+            const instalacionAfectada = defecto.instalacionAfectada || (registro.numeroMedidor ? `Medidor ${registro.numeroMedidor}` : 'Instalación');
+            return `${defectoTexto} (${instalacionAfectada})`;
+          });
         } else {
-          doc.text(header, xPos + 3, yPos + 8, {
-             width: columnWidths[index] - 6,
-             align: 'center'
-           });
-        }
-        
-        if (index < headers.length - 1) {
-          doc.moveTo(xPos + columnWidths[index], yPos)
-             .lineTo(xPos + columnWidths[index], yPos + 25)
-             .stroke();
-        }
-        
-        xPos += columnWidths[index];
-      });
-      
-      yPos += 25;
-      
-      // Dibujar filas de datos
-      registrosTransformados.forEach((registro) => {
-        // Consolidar todos los defectos críticos en una sola descripción numerada
-         let defectoCompleto;
-         if (registro.defectosCriticos && registro.defectosCriticos.length > 0) {
-           const defectosTextos = registro.defectosCriticos.map((defecto, index) => {
-             const defectoTexto = defecto.tipo || 'Defecto crítico detectado';
-             const instalacionAfectada = defecto.instalacionAfectada || (registro.numeroMedidor ? `Medidor ${registro.numeroMedidor}` : 'Instalación');
-             return `${index + 1}. ${defectoTexto} (${instalacionAfectada})`;
-           });
-           defectoCompleto = defectosTextos.join(' ');
-        } else {
-          // Si no hay defectos específicos, mostrar descripción genérica
           const numeroMedidor = registro.numeroMedidor || 'N/A';
           const instalacionAfectada = numeroMedidor !== 'N/A' ? `Medidor ${numeroMedidor}` : 'Instalación';
-          defectoCompleto = `Defecto crítico en instalación de gas (${instalacionAfectada})`;
+          defectosArray = [`Defecto crítico en instalación de gas (${instalacionAfectada})`];
         }
         
-        // Calcular altura dinámica basada en el texto de defectos
-        const defectoColumnWidth = 245 - 4; // Ancho de la columna de defectos menos padding
-        doc.font('Arial').fontSize(8);
-        const textHeight = doc.heightOfString(defectoCompleto, { width: defectoColumnWidth });
-        const minRowHeight = 25; // Altura mínima
-        const padding = 6; // Padding superior e inferior
-        const rowHeight = Math.max(minRowHeight, textHeight + padding);
-        
-        // Fondo de la fila
-        doc.rect(50, yPos, 515, rowHeight).fillAndStroke('#FFFFFF', '#000000');
-        
-        const rowData = [
-          registro.block || '-',
-          registro.deptoCasa || '-',
-          defectoCompleto,
-          registro.numeroMedidor || '-',
-          '' // N°REPORTE dejado en blanco
-        ];
-        
-        xPos = 50;
-        rowData.forEach((data, index) => {
-          // Calcular posición vertical centrada para el texto
-          doc.font('Arial').fontSize(8); // Establecer fuente y tamaño antes de calcular altura
-          const textY = yPos + (rowHeight - doc.heightOfString(data, { 
-            width: columnWidths[index] - 4
-          })) / 2;
-          
-          doc.fillColor('#000000')
-             .text(data, xPos + 2, textY, {
-               width: columnWidths[index] - 4,
-               align: index === 2 ? 'left' : 'center'
-             });
-          
-          if (index < columnWidths.length - 1) {
-            doc.moveTo(xPos + columnWidths[index], yPos)
-               .lineTo(xPos + columnWidths[index], yPos + rowHeight)
-               .stroke();
-          }
-          
-          xPos += columnWidths[index];
-        });
-        
-        yPos += rowHeight;
+        // Calcular altura total del bloque
+        const headerHeight = 22;
+        const infoHeight = 22;
+        const defectosLabelHeight = 20;
+        const defectoLineHeight = 18;
+        const defectosContentHeight = defectosArray.length * defectoLineHeight + 8;
+        const totalBlockHeight = headerHeight + infoHeight + defectosLabelHeight + defectosContentHeight;
         
         // Verificar si necesitamos una nueva página
-        if (yPos > 750) {
+        if (yPos + totalBlockHeight > 720) {
           doc.addPage();
           drawHeader();
           yPos = 120;
         }
+        
+        // === ENCABEZADO DEL BLOQUE (verde) ===
+        doc.rect(leftMargin, yPos, totalWidth, headerHeight)
+           .fillAndStroke('#E8F5E8', '#000000');
+        
+        // Contenido del encabezado: TORRE - UNIDAD - MEDIDOR
+        doc.font('Arial-Bold').fontSize(10).fillColor('#000000');
+        const torre = registro.block || '-';
+        const unidad = registro.deptoCasa || '-';
+        const medidor = registro.numeroMedidor || '-';
+        doc.text(`TORRE: ${torre}          UNIDAD: ${unidad}          MEDIDOR: ${medidor}`, 
+                 leftMargin + 10, yPos + 6, { width: totalWidth - 20 });
+        
+        yPos += headerHeight;
+        
+        // === FILA DE INFORMACIÓN PERSONAL (blanco) ===
+        doc.rect(leftMargin, yPos, totalWidth, infoHeight)
+           .fillAndStroke('#FFFFFF', '#000000');
+        
+        const nombre = registro.nombre || '-';
+        const rut = registro.rut || '-';
+        const telefono = registro.telefono || '-';
+        
+        doc.font('Arial').fontSize(9).fillColor('#000000');
+        doc.text(`NOMBRE: ${nombre}     |     RUT: ${rut}     |     TEL: ${telefono}`, 
+                 leftMargin + 10, yPos + 6, { width: totalWidth - 20 });
+        
+        yPos += infoHeight;
+        
+        // === ETIQUETA DEFECTOS (gris claro) ===
+        doc.rect(leftMargin, yPos, totalWidth, defectosLabelHeight)
+           .fillAndStroke('#F0F0F0', '#000000');
+        
+        doc.font('Arial-Bold').fontSize(9).fillColor('#000000');
+        doc.text('DEFECTOS CRÍTICOS:', leftMargin + 10, yPos + 5, { width: totalWidth - 20 });
+        
+        yPos += defectosLabelHeight;
+        
+        // === LISTA DE DEFECTOS (blanco) ===
+        doc.rect(leftMargin, yPos, totalWidth, defectosContentHeight)
+           .fillAndStroke('#FFFFFF', '#000000');
+        
+        doc.font('Arial').fontSize(9).fillColor('#000000');
+        let defectoY = yPos + 6;
+        defectosArray.forEach((defecto, index) => {
+          doc.text(`  •  ${defecto}`, leftMargin + 15, defectoY, { width: totalWidth - 40 });
+          defectoY += defectoLineHeight;
+        });
+        
+        yPos += defectosContentHeight;
+        
+        // Espacio entre bloques
+        yPos += 10;
       });
     };
 
@@ -419,19 +394,19 @@ export async function GET(request: NextRequest) {
       
       const signatureY = Math.max(currentY + 30, 550);
       
-      // Agregar firma y timbre juntos en el centro
-      const firmaPath = path.join(process.cwd(), 'public', 'firmasimetec.png');
+      // Agregar firma y timbre
+      const firmaPath = path.join(process.cwd(), 'public', 'firma.jpg');
       const timbrePath = path.join(process.cwd(), 'public', 'TIMBRE.png');
       
       // Posición ajustada hacia la derecha para firma y timbre
        const rightX = 420; // Movido hacia la derecha
        
-       // Agregar firma (más grande)
+       // Agregar firma de Danilo Ruiz (derecha)
        if (fs.existsSync(firmaPath)) {
          try {
            const firmaBuffer = fs.readFileSync(firmaPath);
            doc.image(firmaBuffer, rightX - 85, signatureY, { width: 150 });
-           console.log('Firma SIMETEC cargada correctamente')
+           console.log('Firma cargada correctamente')
          } catch (error) {
            console.error('Error loading firma:', error);
          }
@@ -439,7 +414,7 @@ export async function GET(request: NextRequest) {
          console.log('Firma no encontrada en:', firmaPath)
        }
        
-       // Agregar timbre al lado de la firma (más grande, más a la izquierda y más arriba)
+       // Agregar timbre al lado de la firma
        if (fs.existsSync(timbrePath)) {
          try {
            const timbreBuffer = fs.readFileSync(timbrePath);
@@ -458,19 +433,19 @@ export async function GET(request: NextRequest) {
           .lineTo(rightX + 145, lineY)
           .stroke();
        
-       // Texto LEANDRO SOTO centrado
+       // Texto Danilo Ruiz centrado (derecha)
        doc.font('Arial-Bold')
           .fontSize(12)
           .fillColor('#000000')
-          .text('Danilo E. Ruiz Johns', rightX - 85, lineY + 10, {
+          .text('Danilo Ruiz', rightX - 85, lineY + 10, {
             width: 230,
             align: 'center'
           });
        
-       // Texto INSPECTOR DE GAS centrado debajo (en negrita)
+       // Texto Gerente Técnico centrado debajo (en negrita)
         doc.font('Arial-Bold')
            .fontSize(10)
-           .text('INSPECTOR DE GAS', rightX - 85, lineY + 30, {
+           .text('Gerente Técnico', rightX - 85, lineY + 30, {
              width: 230,
              align: 'center'
            });
