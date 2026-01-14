@@ -272,19 +272,20 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                       <p className="text-xs text-muted-foreground">Archivo</p>
                       {gasto.archivo ? (
                         <div className="mt-1">
-                          {gasto.archivo.startsWith('data:image/') ? (
-                            <img
-                              src={gasto.archivo}
-                              alt="Imagen del gasto"
-                              className="h-20 w-full object-cover rounded border cursor-pointer"
-                              onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
-                            />
-                          ) : (
-                            <div className="flex items-center gap-2">
-                              <FileIcon className="h-4 w-4 text-blue-500" />
-                              <span className="text-sm text-blue-500 truncate" title={gasto.archivo}>Archivo</span>
-                            </div>
-                          )}
+                          <img
+                            src={gasto.archivo}
+                            alt="Comprobante"
+                            className="h-20 w-full object-cover rounded border cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => handleOpenImageModal(gasto.archivo!)}
+                            onError={(e) => {
+                              // Si la imagen falla al cargar, mostrar ícono de archivo
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              const parent = (e.target as HTMLImageElement).parentElement;
+                              if (parent) {
+                                parent.innerHTML = '<div class="flex items-center gap-2"><svg class="h-4 w-4 text-blue-500" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><a href="' + gasto.archivo + '" target="_blank" rel="noopener noreferrer" class="text-sm text-blue-500 hover:underline truncate">Ver archivo</a></div>';
+                              }
+                            }}
+                          />
                         </div>
                       ) : (
                         <span className="text-xs text-muted-foreground">Sin archivo</span>
@@ -350,24 +351,20 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
                         </TableCell>
                         <TableCell className={`h-16 px-6 py-4 ${isAdmin ? 'border-r-2 border-border' : ''}`}>
                           {gasto.archivo ? (
-                            <div className="flex items-center gap-2">
-                              {gasto.archivo.startsWith('data:image/') ? (
-                                <img
-                                  src={gasto.archivo}
-                                  alt="Imagen del gasto"
-                                  className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
-                                  onClick={() => gasto.archivo && handleOpenImageModal(gasto.archivo)}
-                                  title="Click para ver imagen completa"
-                                />
-                              ) : (
-                                <>
-                                  <FileIcon className="h-4 w-4 text-blue-500" />
-                                  <span className="text-sm text-blue-500 truncate max-w-[100px]" title={gasto.archivo}>
-                                    Archivo
-                                  </span>
-                                </>
-                              )}
-                            </div>
+                            <img
+                              src={gasto.archivo}
+                              alt="Comprobante"
+                              className="h-10 w-10 object-cover rounded border cursor-pointer hover:scale-110 transition-transform"
+                              onClick={() => handleOpenImageModal(gasto.archivo!)}
+                              title="Click para ver comprobante completo"
+                              onError={(e) => {
+                                // Si la imagen falla al cargar, reemplazar con enlace
+                                const parent = (e.target as HTMLImageElement).parentElement;
+                                if (parent) {
+                                  parent.innerHTML = '<a href="' + gasto.archivo + '" target="_blank" rel="noopener noreferrer" class="flex items-center gap-2 text-blue-500 hover:underline"><svg class="h-4 w-4" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg><span class="text-sm">Ver archivo</span></a>';
+                                }
+                              }}
+                            />
                           ) : (
                             <span className="text-muted-foreground text-sm">Sin archivo</span>
                           )}
@@ -440,15 +437,28 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
         <DialogContent className="max-w-4xl max-h-[90vh] p-0">
           <DialogHeader className="p-6 pb-2">
             <DialogTitle className="flex items-center justify-between">
-              <span>Imagen del Gasto</span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleCloseImageModal}
-                className="h-6 w-6 p-0"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <span>Comprobante del Gasto</span>
+              <div className="flex items-center gap-2">
+                {selectedImage && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => window.open(selectedImage, '_blank')}
+                    title="Abrir en nueva pestaña"
+                  >
+                    <FileIcon className="h-4 w-4 mr-2" />
+                    Abrir en nueva pestaña
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleCloseImageModal}
+                  className="h-6 w-6 p-0"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </DialogTitle>
           </DialogHeader>
           <div className="p-6 pt-2">
@@ -456,8 +466,15 @@ export function DataTableClient({ gastos, currentUser }: DataTableClientProps) {
               <div className="flex justify-center">
                 <img
                   src={selectedImage}
-                  alt="Imagen del gasto en tamaño completo"
+                  alt="Comprobante en tamaño completo"
                   className="max-w-full max-h-[70vh] object-contain rounded-lg shadow-lg"
+                  onError={(e) => {
+                    // Si la imagen no carga, mostrar mensaje y enlace directo
+                    const parent = (e.target as HTMLImageElement).parentElement;
+                    if (parent) {
+                      parent.innerHTML = '<div class="text-center py-12"><p class="text-muted-foreground mb-4">No se pudo cargar la vista previa</p><a href="' + selectedImage + '" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 text-blue-500 hover:underline"><svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"></path><polyline points="14 2 14 8 20 8"></polyline></svg>Abrir archivo directamente</a></div>';
+                    }
+                  }}
                 />
               </div>
             )}
