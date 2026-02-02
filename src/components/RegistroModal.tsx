@@ -539,12 +539,12 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                 <SelectItem value="Gasco">Gasco</SelectItem>
                 <SelectItem value="Abastible">Abastible</SelectItem>
                 <SelectItem value="Intergas">Intergas</SelectItem>
+                <SelectItem value="Uligas">Uligas</SelectItem>
+                <SelectItem value="GasValpo">GasValpo</SelectItem>
                 <SelectItem value="Gassur">GasSur</SelectItem>
                 <SelectItem value="Equipo GLP">Equipo GLP</SelectItem>
                 <SelectItem value="Energas">Energas</SelectItem>
-                <SelectItem value="GasValpo">GGasValpo</SelectItem>
                 <SelectItem value="GasMaule">GasMaule</SelectItem>
-
               </SelectContent>
             </Select>
             {errors.empresaGas && (
