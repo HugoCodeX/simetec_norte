@@ -42,6 +42,8 @@ const empresasDistribuidoras = [
   'Intergas',
   'GasSur',
   'Equipo GLP',
+  'Gas Valpo',
+  'Uligas'
 ];
 
 export default function PDFNotificacionModal({
