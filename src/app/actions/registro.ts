@@ -32,19 +32,16 @@ export async function crearRegistro(data: RegistroData) {
   try {
     const session = await getServerSession()
     
-    // Generar folio automáticamente
-    const ultimoRegistro = await prisma.registro.findFirst({
-      orderBy: {
-        folio: 'desc'
-      }
+    // Generar folio automáticamente - buscar el máximo numérico
+    const registros = await prisma.registro.findMany({
+      select: { folio: true }
     })
     
     let nuevoFolio: string
-    if (ultimoRegistro) {
-      const ultimoNumero = parseInt(ultimoRegistro.folio)
-      nuevoFolio = (ultimoNumero + 1).toString()
+    if (registros.length > 0) {
+      const maxFolio = Math.max(...registros.map(r => parseInt(r.folio)).filter(n => !isNaN(n)))
+      nuevoFolio = (maxFolio + 1).toString()
     } else {
-      // Si no hay registros, empezar desde 100
       nuevoFolio = "1"
     }
     
@@ -111,18 +108,15 @@ export async function obtenerProximoFolio() {
       }
     }
 
-    const ultimoRegistro = await prisma.registro.findFirst({
-      orderBy: {
-        folio: 'desc'
-      }
+    const registros = await prisma.registro.findMany({
+      select: { folio: true }
     })
     
     let proximoFolio: string
-    if (ultimoRegistro) {
-      const ultimoNumero = parseInt(ultimoRegistro.folio)
-      proximoFolio = (ultimoNumero + 1).toString()
+    if (registros.length > 0) {
+      const maxFolio = Math.max(...registros.map(r => parseInt(r.folio)).filter(n => !isNaN(n)))
+      proximoFolio = (maxFolio + 1).toString()
     } else {
-      // Si no hay registros, empezar desde 100
       proximoFolio = "1"
     }
 
