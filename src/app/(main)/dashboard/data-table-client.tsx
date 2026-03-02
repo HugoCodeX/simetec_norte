@@ -35,6 +35,8 @@ import PDFNotificacionModal, { NotificacionData } from "@/components/PDFNotifica
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { generarEnlaceTemporal } from "@/app/actions/preview-links";
+import { marcarComoNotificado } from "@/app/actions/registro";
+import { CheckCircle2 } from "lucide-react";
 // Removida importación de generarPDFRegistro - ahora usamos API route
 
 interface Registro {
@@ -54,6 +56,7 @@ interface Registro {
   correoElectronico: string | null;
   numeroMedidor: string;
   firma: string | null;
+  notificado: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -72,6 +75,10 @@ export function DataTableClient({ registros }: DataTableClientProps) {
   const [visualizandoPDF, setVisualizandoPDF] = useState<number | null>(null);
   const [registrosSeleccionados, setRegistrosSeleccionados] = useState<Set<number>>(new Set());
   const [modalNotificacionOpen, setModalNotificacionOpen] = useState(false);
+  // Estado local optimista para notificado (evita recargar página para ver el cambio)
+  const [notificadosLocales, setNotificadosLocales] = useState<Set<number>>(
+    () => new Set(registros.filter(r => r.notificado).map(r => r.id))
+  );
 
   // Filtrar registros basado en el término de búsqueda
   const filteredRegistros = registros.filter((registro) => {
@@ -271,10 +278,11 @@ export function DataTableClient({ registros }: DataTableClientProps) {
         );
         registrosParaDescargar.splice(0, registrosParaDescargar.length, ...registrosSinDuplicados);
       }
-      const registroIds = registrosParaDescargar.map(r => r.id).join(',');
+      const registroIds = registrosParaDescargar.map(r => r.id);
+      const registroIdsStr = registroIds.join(',');
 
       const params = new URLSearchParams({
-        ids: registroIds,
+        ids: registroIdsStr,
         comunidad: datosNotificacion.comunidad || 'No especificado',
         direccion: datosNotificacion.direccionComunidad || 'No especificado',
         administrador: datosNotificacion.administrador || 'No especificado',
@@ -284,12 +292,48 @@ export function DataTableClient({ registros }: DataTableClientProps) {
 
       const downloadUrl = `/api/notificacion-defectos?${params.toString()}`;
       window.location.href = downloadUrl;
+
+      // Marcar los registros como notificados en la base de datos
+      await marcarComoNotificado(registroIds);
+      // Actualizar estado local optimista
+      setNotificadosLocales(prev => {
+        const next = new Set(prev);
+        registroIds.forEach(id => next.add(id));
+        return next;
+      });
+      toast.success(`${registroIds.length} registro(s) marcado(s) como notificados.`);
       setRegistrosSeleccionados(new Set());
     } catch (error) {
       console.error('Error al generar PDF de notificación:', error);
       alert('Error al generar PDF de notificación. Por favor, inténtalo de nuevo.');
     } finally {
       setDescargandoPDF(null);
+    }
+  };
+
+  const handleToggleNotificado = async (registro: Registro) => {
+    const eraNotificado = notificadosLocales.has(registro.id);
+    // Actualizar local inmediatamente (optimista)
+    setNotificadosLocales(prev => {
+      const next = new Set(prev);
+      if (eraNotificado) next.delete(registro.id); else next.add(registro.id);
+      return next;
+    });
+    try {
+      await marcarComoNotificado([registro.id], !eraNotificado);
+      toast.success(
+        eraNotificado
+          ? `Registro ${registro.folio} desmarcado como notificado.`
+          : `Registro ${registro.folio} marcado como notificado.`
+      );
+    } catch (error) {
+      // Revertir si falla
+      setNotificadosLocales(prev => {
+        const next = new Set(prev);
+        if (eraNotificado) next.add(registro.id); else next.delete(registro.id);
+        return next;
+      });
+      toast.error('Error al actualizar el estado del registro.');
     }
   };
 
@@ -417,6 +461,7 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                       />
                     </TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FOLIO</TableHead>
+                    <TableHead className="h-14 px-6 py-4 font-semibold text-center border-r-2 border-border">NOTIFICADO</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">ACCIONES</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">FECHA</TableHead>
                     <TableHead className="h-14 px-6 py-4 font-semibold text-left border-r-2 border-border">DIRECCIÓN</TableHead>
@@ -445,6 +490,19 @@ export function DataTableClient({ registros }: DataTableClientProps) {
                         />
                       </TableCell>
                       <TableCell className="h-16 px-6 py-4 font-medium border-r-2 border-border">{registro.folio}</TableCell>
+                      <TableCell className="h-16 px-6 py-4 border-r-2 border-border text-center">
+                        <button
+                          onClick={() => handleToggleNotificado(registro)}
+                          title={notificadosLocales.has(registro.id) ? "Marcado como notificado. Clic para desmarcar." : "No notificado. Clic para marcar."}
+                          className="inline-flex items-center justify-center rounded-full transition-opacity hover:opacity-70"
+                        >
+                          {notificadosLocales.has(registro.id) ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <span className="inline-block h-4 w-4 rounded-full border-2 border-muted-foreground/40" />
+                          )}
+                        </button>
+                      </TableCell>
                       <TableCell className="h-16 px-6 py-4 border-r-2 border-border">
                         <div className="flex items-center gap-2">
                           <Button

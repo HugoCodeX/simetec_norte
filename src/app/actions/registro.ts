@@ -231,6 +231,20 @@ export async function actualizarRegistro(id: number, data: RegistroData) {
   }
 }
 
+export async function marcarComoNotificado(ids: number[], notificado: boolean = true) {
+  try {
+    await prisma.registro.updateMany({
+      where: { id: { in: ids } },
+      data: { notificado }
+    })
+    revalidatePath('/dashboard')
+    return { success: true }
+  } catch (error) {
+    console.error('Error al marcar registros como notificados:', error)
+    return { success: false, error: 'Error interno del servidor' }
+  }
+}
+
 export async function obtenerRegistroPorId(id: number) {
   try {
     const registro = await prisma.registro.findUnique({

@@ -96,6 +96,7 @@ model Registro {
   correoElectronico    String?
   numeroMedidor        String
   firma                String?          // Base64 de la imagen de firma
+  notificado           Boolean          @default(false) // Marca si el registro ya fue incluido en un PDF de notificación
   defectosCriticos     DefectoCritico[]
   createdAt            DateTime         @default(now())
   updatedAt            DateTime         @updatedAt
