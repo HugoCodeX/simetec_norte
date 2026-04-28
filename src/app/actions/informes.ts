@@ -213,22 +213,30 @@ async function generarPDFInforme({
     // Encabezados de la tabla
     const headers = ['Fecha', 'Ref.', 'Concepto', 'Tipo Doc.', 'N° Doc.', 'Monto']
 
-    // Dibujar encabezados
-    doc.font('Calibri-Bold').fontSize(9).fillColor('black')
-    let currentX = tableLeft
-    headers.forEach((header, i) => {
-      doc.rect(currentX, tableTop, colWidths[i], rowHeight).stroke()
-      doc.text(header, currentX + 5, tableTop + 5, { width: colWidths[i] - 10 })
-      currentX += colWidths[i]
-    })
+    const drawHeaders = (yPos: number) => {
+      doc.font('Calibri-Bold').fontSize(9).fillColor('black')
+      let hX = tableLeft
+      headers.forEach((header, i) => {
+        doc.rect(hX, yPos, colWidths[i], rowHeight).stroke()
+        doc.text(header, hX + 5, yPos + 5, { width: colWidths[i] - 10, lineBreak: false })
+        hX += colWidths[i]
+      })
+      doc.font('Calibri').fontSize(8)
+      return yPos + rowHeight
+    }
 
-    // Dibujar filas de datos
-    doc.font('Calibri').fontSize(8)
-    let currentY = tableTop + rowHeight
+    // Dibujar encabezados iniciales
+    let currentY = drawHeaders(tableTop)
 
     for (let idx = 0; idx < gastos.length; idx++) {
+      if (currentY + rowHeight > doc.page.height - 70) {
+        doc.addPage()
+        currentY = 50
+        currentY = drawHeaders(currentY)
+      }
+
       const gasto = gastos[idx]
-      currentX = tableLeft
+      let currentX = tableLeft
       const rowData = [
         new Date(gasto.fecha).toLocaleDateString('es-ES'),
         String(idx + 1),
@@ -240,16 +248,22 @@ async function generarPDFInforme({
 
       rowData.forEach((data, i) => {
         doc.rect(currentX, currentY, colWidths[i], rowHeight).stroke()
-        doc.text(data, currentX + 5, currentY + 5, { width: colWidths[i] - 10 })
+        // limit text width with lineBreak: false to prevent auto wrapping and overlapping
+        let textData = data
+        if (typeof textData === 'string' && textData.length > 50) textData = textData.substring(0, 47) + '...'
+        doc.text(textData, currentX + 5, currentY + 5, { width: colWidths[i] - 10, height: rowHeight, lineBreak: false })
         currentX += colWidths[i]
       })
       currentY += rowHeight
     }
 
-    // Llenar filas vacías hasta completar 15 filas
+    // Llenar filas vacías hasta completar 15 filas (solo en la última página si hay espacio)
     const filasVacias = Math.max(0, 15 - gastos.length)
     for (let i = 0; i < filasVacias; i++) {
-      currentX = tableLeft
+      if (currentY + rowHeight > doc.page.height - 70) {
+        break // No crear nueva página solo para filas en blanco
+      }
+      let currentX = tableLeft
       colWidths.forEach((width) => {
         doc.rect(currentX, currentY, width, rowHeight).stroke()
         currentX += width
@@ -262,6 +276,12 @@ async function generarPDFInforme({
 
   // Función para dibujar totales
   const drawTotals = (startY: number) => {
+    // Verificar si hay espacio suficiente para los totales (aprox 80 de alto)
+    if (startY + 90 > doc.page.height - 70) {
+      doc.addPage()
+      startY = 50
+    }
+
     const totalLeft = 350
 
     doc.font('Calibri-Bold').fontSize(10)
