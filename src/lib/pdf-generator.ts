@@ -332,10 +332,15 @@ export async function generateNotificationPDF(
 
     // Función para dibujar firma y timbre al final
     const drawSignatureAndStamp = (lastContentY: number) => {
-        // Verificar si hay espacio suficiente en la página actual
+        // Si el contenido terminó muy abajo o el espacio restante es insuficiente, nueva página
         if (lastContentY > 550) {
             doc.addPage();
             drawHeader();
+            lastContentY = 120;
+        } else if (lastContentY + 222 > 750) {
+            doc.addPage();
+            drawHeader();
+            lastContentY = 120;
         }
 
         const signatureY = Math.max(lastContentY + 30, 200);
