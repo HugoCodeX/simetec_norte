@@ -215,7 +215,7 @@ export async function generateNotificationPDF(
     };
 
     // Función para dibujar la tabla de defectos
-    const drawDefectosTable = (startY: number) => {
+    const drawDefectosTable = (startY: number): number => {
         let yPos = startY;
 
         // Encabezados de la tabla
@@ -233,7 +233,6 @@ export async function generateNotificationPDF(
                 .fillColor('#000000');
 
             if (index === 4) {
-                // Para "N° REPORTE", dividir en dos líneas
                 doc.text('N°', xPos + 3, yPos + 3, {
                     width: columnWidths[index] - 6,
                     align: 'center'
@@ -272,19 +271,25 @@ export async function generateNotificationPDF(
                 });
                 defectoCompleto = defectosTextos.join(' ');
             } else {
-                // Si no hay defectos específicos, mostrar descripción genérica
                 const numeroMedidor = registro.numeroMedidor || 'N/A';
                 const instalacionAfectada = numeroMedidor !== 'N/A' ? `Medidor ${numeroMedidor}` : 'Instalación';
                 defectoCompleto = `Defecto crítico en instalación de gas (${instalacionAfectada})`;
             }
 
             // Calcular altura dinámica basada en el texto de defectos
-            const defectoColumnWidth = 245 - 4; // Ancho de la columna de defectos menos padding
+            const defectoColumnWidth = 245 - 4;
             doc.font('Arial').fontSize(8);
             const textHeight = doc.heightOfString(defectoCompleto, { width: defectoColumnWidth });
-            const minRowHeight = 25; // Altura mínima
-            const padding = 6; // Padding superior e inferior
+            const minRowHeight = 25;
+            const padding = 6;
             const rowHeight = Math.max(minRowHeight, textHeight + padding);
+
+            // Verificar si necesitamos una nueva página ANTES de dibujar (con margen inferior)
+            if (yPos + rowHeight > 750) {
+                doc.addPage();
+                drawHeader();
+                yPos = 120;
+            }
 
             // Fondo de la fila
             doc.rect(50, yPos, 515, rowHeight).fillAndStroke('#FFFFFF', '#000000');
@@ -294,13 +299,12 @@ export async function generateNotificationPDF(
                 registro.deptoCasa || '-',
                 defectoCompleto,
                 registro.numeroMedidor || '-',
-                '' // N°REPORTE dejado en blanco
+                ''
             ];
 
             xPos = 50;
             rowData.forEach((data, index) => {
-                // Calcular posición vertical centrada para el texto
-                doc.font('Arial').fontSize(8); // Establecer fuente y tamaño antes de calcular altura
+                doc.font('Arial').fontSize(8);
                 const textY = yPos + (rowHeight - doc.heightOfString(data, {
                     width: columnWidths[index] - 4
                 })) / 2;
@@ -321,25 +325,20 @@ export async function generateNotificationPDF(
             });
 
             yPos += rowHeight;
-
-            // Verificar si necesitamos una nueva página
-            if (yPos > 750) {
-                doc.addPage();
-                drawHeader();
-                yPos = 120;
-            }
         });
+
+        return yPos;
     };
 
     // Función para dibujar firma y timbre al final
-    const drawSignatureAndStamp = () => {
+    const drawSignatureAndStamp = (lastContentY: number) => {
         // Verificar si hay espacio suficiente en la página actual
-        const currentY = doc.y;
-        if (currentY > 550) {
+        if (lastContentY > 550) {
             doc.addPage();
+            drawHeader();
         }
 
-        const signatureY = Math.max(currentY + 30, 550);
+        const signatureY = Math.max(lastContentY + 30, 200);
 
         // Agregar firma y timbre juntos en el centro
         const firmaPath = path.join(process.cwd(), 'public', 'firmasimetec.png');
@@ -428,8 +427,8 @@ export async function generateNotificationPDF(
     console.log('Iniciando generación del documento PDF (SHARED)');
     drawHeader();
     const tableStartY = drawOrganismoInfo();
-    drawDefectosTable(tableStartY);
-    drawSignatureAndStamp();
+    const tableEndY = drawDefectosTable(tableStartY);
+    drawSignatureAndStamp(tableEndY);
 
     // Finalizar el documento
     console.log('Finalizando documento PDF (SHARED)');

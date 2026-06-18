@@ -293,7 +293,7 @@ export async function GET(request: NextRequest) {
     };
 
     // Función para dibujar la tabla de defectos
-    const drawDefectosTable = (startY: number) => {
+    const drawDefectosTable = (startY: number): number => {
       let yPos = startY;
       const totalWidth = 515;
       const leftMargin = 50;
@@ -314,15 +314,19 @@ export async function GET(request: NextRequest) {
           defectosArray = [`Defecto crítico en instalación de gas (${instalacionAfectada})`];
         }
         
-        // Calcular altura total del bloque
+        // Calcular altura dinámica basada en el texto real
         const headerHeight = 22;
         const infoHeight = 22;
         const defectosLabelHeight = 20;
-        const defectoLineHeight = 18;
-        const defectosContentHeight = defectosArray.length * defectoLineHeight + 8;
+        doc.font('Arial').fontSize(9);
+        let defectosContentHeight = 8;
+        defectosArray.forEach(defecto => {
+          const h = doc.heightOfString(`  •  ${defecto}`, { width: totalWidth - 40 });
+          defectosContentHeight += Math.max(h, 18);
+        });
         const totalBlockHeight = headerHeight + infoHeight + defectosLabelHeight + defectosContentHeight;
         
-        // Verificar si necesitamos una nueva página
+        // Verificar si necesitamos una nueva página ANTES de dibujar
         if (yPos + totalBlockHeight > 720) {
           doc.addPage();
           drawHeader();
@@ -374,7 +378,7 @@ export async function GET(request: NextRequest) {
         let defectoY = yPos + 6;
         defectosArray.forEach((defecto, index) => {
           doc.text(`  •  ${defecto}`, leftMargin + 15, defectoY, { width: totalWidth - 40 });
-          defectoY += defectoLineHeight;
+          defectoY += doc.heightOfString(`  •  ${defecto}`, { width: totalWidth - 40 });
         });
         
         yPos += defectosContentHeight;
@@ -382,17 +386,19 @@ export async function GET(request: NextRequest) {
         // Espacio entre bloques
         yPos += 10;
       });
+      
+      return yPos;
     };
 
     // Función para dibujar firma y timbre al final
-    const drawSignatureAndStamp = () => {
+    const drawSignatureAndStamp = (lastContentY: number) => {
       // Verificar si hay espacio suficiente en la página actual
-      const currentY = doc.y;
-      if (currentY > 550) {
+      if (lastContentY > 550) {
         doc.addPage();
+        drawHeader();
       }
       
-      const signatureY = Math.max(currentY + 30, 550);
+      const signatureY = Math.max(lastContentY + 30, 200);
       
       // Agregar firma y timbre
       const firmaPath = path.join(process.cwd(), 'public', 'firma.jpg');
@@ -481,8 +487,8 @@ export async function GET(request: NextRequest) {
     console.log('Iniciando generación del documento PDF')
     drawHeader();
     const tableStartY = drawOrganismoInfo();
-    drawDefectosTable(tableStartY);
-    drawSignatureAndStamp();
+    const tableEndY = drawDefectosTable(tableStartY);
+    drawSignatureAndStamp(tableEndY);
 
     // Finalizar el documento
     console.log('Finalizando documento PDF')

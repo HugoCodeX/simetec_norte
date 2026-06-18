@@ -349,7 +349,6 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
     // TABLA DE DEFECTOS
     const defectosTableY = y
-    const defectosTableHeight = rowH * 15
 
     // Header de la tabla
     // Columna 1: TIPO DE DEFECTO
@@ -391,13 +390,34 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
         })
 
         y += rowHeight
+
+        // Verificar si hay riesgo de desbordamiento de página
+        if (y > 700) {
+          doc.addPage()
+          // Redibujar header de la tabla en la nueva página
+          doc.rect(tableX, 40, tableW * 0.6, rowH).fill('#343a40').stroke()
+          doc.strokeColor('black').lineWidth(1)
+          doc.rect(tableX, 40, tableW * 0.6, rowH).stroke()
+          doc.font('Calibri-Bold').fontSize(11).fillColor('white').text('TIPO DE DEFECTO', tableX + 6, 48, {
+            width: tableW * 0.6 - 12,
+            align: 'center'
+          })
+          doc.rect(tableX + tableW * 0.6, 40, tableW * 0.4, rowH).fill('#343a40').stroke()
+          doc.strokeColor('black').lineWidth(1)
+          doc.rect(tableX + tableW * 0.6, 40, tableW * 0.4, rowH).stroke()
+          doc.font('Calibri-Bold').fontSize(10).fillColor('white').text('INSTALACIÓN AFECTADA Y SUS COMPONENTES', tableX + tableW * 0.6 + 6, 48, {
+            width: tableW * 0.4 - 12,
+          })
+          y = 40 + rowH
+        }
       })
     }
 
-    y = defectosTableY + defectosTableHeight
-
-    // Espacio adicional para subir todo el bloque de advertencia y certificación
-    y -= 200
+    // Verificar si hay espacio suficiente para la caja de advertencia + firmas
+    if (y > 620) {
+      doc.addPage()
+      y = 50
+    }
 
     // Caja de advertencia
     doc.rect(tableX, y, tableW, rowH * 3).stroke()
