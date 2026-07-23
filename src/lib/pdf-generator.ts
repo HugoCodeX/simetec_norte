@@ -65,10 +65,10 @@ export async function generateNotificationPDF(
         font: fontRegular,
         info: {
             Title: `Notificación de Defectos Críticos - ${fechaNotificacion}`,
-            Author: 'SIMETEC SUR LTDA',
+            Author: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
             Subject: `Notificación de defectos críticos para ${datosNotificacion.comunidad || 'Comunidad'}`,
             Keywords: 'defectos críticos, gas, notificación, SIMETEC',
-            Creator: 'SIMETEC SUR LTDA',
+            Creator: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
             Producer: 'Sistema SIMETEC'
         }
     });
@@ -129,11 +129,11 @@ export async function generateNotificationPDF(
 
         // Primera tabla: Información de SIMETEC
         const simetecData = [
-            ['ORGANISMO DE INSPECCIÓN', 'Simetec Sur Ltda.'],
+            ['ORGANISMO DE INSPECCIÓN', 'Entidad de Certificación Simetec Ltda.'],
             ['DIRECCIÓN', 'Av. O\'Higgins # 491 Of 33, Concepción, Edificio O\'Higgins'],
             ['RUT', '77.481.726-3'],
-            ['E-MAIL', 'contacto@simetecsur.cl'],
-            ['FONO', '9 7852 6677']
+            ['E-MAIL', 'info@simetec-chile.cl'],
+            ['FONO', '9 9832 7807']
         ];
 
         simetecData.forEach((row, index) => {
@@ -506,8 +506,8 @@ export async function generateFormularioPDF(registro: any): Promise<Buffer> {
         font: fontRegular,
         info: {
             Title: `Formulario de Defectos Críticos - ${registro.folio}`,
-            Author: 'SIMETEC SUR LTDA',
-            Creator: 'SIMETEC SUR LTDA'
+            Author: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
+            Creator: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA'
         }
     });
 
@@ -652,9 +652,9 @@ export async function generateFormularioPDF(registro: any): Promise<Buffer> {
     }
 
     // Texto en el cuadrito principal con tamaños específicos - más compacto
-    doc.font('Arial-Bold').fontSize(11).fillColor('black').text('ENTIDAD DE CERTIFICACIÓN SIMETEC SUR LTDA', 40, 48, { align: 'center', width: 360 });
-    doc.font('Calibri').fontSize(8).fillColor('black').text('FONO: +56 9 7852 6677 / +56 9 4549 9284', 40, 65, { align: 'center', width: 360 });
-    doc.font('Calibri').fontSize(11).fillColor('blue').text('contacto@simetecsur.cl', 40, 78, { align: 'center', width: 360, link: 'mailto:contacto@simetecsur.cl', underline: true });
+    doc.font('Arial-Bold').fontSize(11).fillColor('black').text('ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA', 40, 48, { align: 'center', width: 360 });
+    doc.font('Calibri').fontSize(8).fillColor('black').text('FONO: +56 9 9832 7807', 40, 65, { align: 'center', width: 360 });
+    doc.font('Calibri').fontSize(11).fillColor('blue').text('info@simetec-chile.cl', 40, 78, { align: 'center', width: 360, link: 'mailto:info@simetec-chile.cl', underline: true });
 
     // Línea divisoria dentro del cuadrito principal - más compacta
     doc.moveTo(40, 88).lineTo(400, 88).stroke();
@@ -866,11 +866,11 @@ export async function generateFormularioPDF(registro: any): Promise<Buffer> {
     const textoWidth = 150;
     const etiquetaSimetecY = firmaSimetecY + firmaSimetecHeight - 15;
     doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Firma Entidad Certificadora', firmaSimetecX, etiquetaSimetecY, { width: textoWidth, align: 'center' });
-    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Simetec Sur LTDA', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true });
+    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Entidad de Certificación Simetec Ltda.', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true });
     doc.font('Calibri').fontSize(10).fillColor('black').text('RUT 77.481.726-3', firmaSimetecX, etiquetaSimetecY + 24, { width: textoWidth, align: 'center' });
     doc.font('Calibri').fontSize(10).fillColor('black').text('Representante Legal', firmaSimetecX, etiquetaSimetecY + 36, { width: textoWidth, align: 'center', underline: true });
-    doc.font('Calibri').fontSize(10).fillColor('black').text('Leandro J. Soto Bustos', firmaSimetecX, etiquetaSimetecY + 48, { width: textoWidth, align: 'center' });
-    doc.font('Calibri').fontSize(10).fillColor('black').text('RUN 15.660.070-9', firmaSimetecX, etiquetaSimetecY + 60, { width: textoWidth, align: 'center' });
+    doc.font('Calibri').fontSize(10).fillColor('black').text('Danilo E. Ruiz Johns', firmaSimetecX, etiquetaSimetecY + 48, { width: textoWidth, align: 'center' });
+    doc.font('Calibri').fontSize(10).fillColor('black').text('RUN 13.432.595-k', firmaSimetecX, etiquetaSimetecY + 60, { width: textoWidth, align: 'center' });
 
     // Agregar nueva página
     doc.addPage();

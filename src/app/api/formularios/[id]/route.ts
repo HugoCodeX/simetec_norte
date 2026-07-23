@@ -107,8 +107,8 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       font: fontRegular,
       info: {
         Title: `Formulario de Defectos Críticos - ${registro.folio}`,
-        Author: 'SIMETEC SUR LTDA',
-        Creator: 'SIMETEC SUR LTDA'
+        Author: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
+        Creator: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA'
       }
     })
 

@@ -142,10 +142,10 @@ export async function GET(request: NextRequest) {
       font: fontRegular,
       info: {
         Title: `Notificación de Defectos Críticos - ${fechaNotificacion}`,
-        Author: 'SIMETEC SUR LTDA',
+        Author: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
         Subject: `Notificación de defectos críticos para ${datosNotificacion.comunidad || 'Comunidad'}`,
         Keywords: 'defectos críticos, gas, notificación, SIMETEC',
-        Creator: 'SIMETEC SUR LTDA',
+        Creator: 'ENTIDAD DE CERTIFICACIÓN SIMETEC LTDA',
         Producer: 'Sistema SIMETEC'
       }
     });
