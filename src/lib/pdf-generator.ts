@@ -866,7 +866,7 @@ export async function generateFormularioPDF(registro: any): Promise<Buffer> {
     const textoWidth = 150;
     const etiquetaSimetecY = firmaSimetecY + firmaSimetecHeight - 15;
     doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Firma Entidad Certificadora', firmaSimetecX, etiquetaSimetecY, { width: textoWidth, align: 'center' });
-    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Entidad de Certificación Simetec Ltda.', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true });
+    doc.font('Calibri-Bold').fontSize(10).fillColor('black').text('Entidad de Certificación Simetec', firmaSimetecX, etiquetaSimetecY + 12, { width: textoWidth, align: 'center', underline: true });
     doc.font('Calibri').fontSize(10).fillColor('black').text('RUT 77.481.726-3', firmaSimetecX, etiquetaSimetecY + 24, { width: textoWidth, align: 'center' });
     doc.font('Calibri').fontSize(10).fillColor('black').text('Representante Legal', firmaSimetecX, etiquetaSimetecY + 36, { width: textoWidth, align: 'center', underline: true });
     doc.font('Calibri').fontSize(10).fillColor('black').text('Danilo E. Ruiz Johns', firmaSimetecX, etiquetaSimetecY + 48, { width: textoWidth, align: 'center' });
