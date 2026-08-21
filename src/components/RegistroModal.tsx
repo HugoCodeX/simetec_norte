@@ -760,7 +760,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                         <SelectTrigger className="bg-white rounded-sm h-10 min-w-0 truncate">
                           <SelectValue placeholder="Seleccione defecto" className="truncate" />
                         </SelectTrigger>
-                        <SelectContent className="max-w-[90vw] sm:max-w-md">
+                        <SelectContent className="max-w-[90vw] sm:max-w-[425px]">
                           <SelectItem value="fuga-gas-artefactos">Fuga de gas en artefactos</SelectItem>
                           <SelectItem value="fuga-gas-red">Fuga de gas en la Red</SelectItem>
                           <SelectItem value="fuga-gas-medidor">Fuga de gas en el Medidor</SelectItem>
