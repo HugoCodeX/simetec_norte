@@ -757,10 +757,10 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                         value={getCodigoFromTexto(defecto.tipo)} 
                         onValueChange={(value) => actualizarDefectoCritico(defecto.id, 'tipo', value)}
                       >
-                        <SelectTrigger className="bg-white rounded-sm h-10">
-                          <SelectValue placeholder="Seleccione defecto" />
+                        <SelectTrigger className="bg-white rounded-sm h-10 min-w-0 truncate">
+                          <SelectValue placeholder="Seleccione defecto" className="truncate" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="max-w-[90vw] sm:max-w-md">
                           <SelectItem value="fuga-gas-artefactos">Fuga de gas en artefactos</SelectItem>
                           <SelectItem value="fuga-gas-red">Fuga de gas en la Red</SelectItem>
                           <SelectItem value="fuga-gas-medidor">Fuga de gas en el Medidor</SelectItem>
