@@ -394,7 +394,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto sm:max-w-[95vw] sm:mx-4 lg:max-w-xl xl:max-w-2xl">
+      <DialogContent className="max-w-[425px] mx-auto max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {modoEdicion ? 'Editar Registro' : 'Agregar Nuevo Registro'}
