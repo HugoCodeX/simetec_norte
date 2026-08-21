@@ -216,7 +216,8 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
     'fuga-flexible': 'Fuga de gas flexible',
     'artefacto-bano': 'Artefacto tipo A o B ubicados al interior de recinto baño, ducha, camarin o dormitorios',
     'fuga-valvula': 'Fuga de gas en valvula o manto del cilindo de GLP',
-    'fuga-caldera': 'Fuga de gas en artefacto caldera, tuerca entrada'
+    'recinto-volumen-reglamentario': 'Todo recinto que cuente con artefacto a gas y/o arranques, cuyo volumen no cumpla con las disposiciones reglamentarias vigentes a la fecha de ejecución de la instalación interior de gas o la del momento en que se realiza la inspección, o con las indicadas en el estudio técnico específico de instalación de artefactos en los casos que corresponda',
+    'gabinete-medidores-ignicion': 'Todo gabinete de medidores de gas que sea compartido con fuentes de ignición'
   }
 
   // Función para obtener el código a partir del texto descriptivo
@@ -776,7 +777,8 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                           <SelectItem value="fuga-flexible">Fuga de gas flexible</SelectItem>
                           <SelectItem value="artefacto-bano">Artefacto tipo A o B ubicados al interior de recinto baño, ducha, camarin o dormitorios</SelectItem>
                           <SelectItem value="fuga-valvula">Fuga de gas en valvula o manto del cilindo de GLP</SelectItem>
-                          <SelectItem value="fuga-caldera">Fuga de gas en artefacto caldera, tuerca entrada</SelectItem>
+                          <SelectItem value="recinto-volumen-reglamentario">Todo recinto que cuente con artefacto a gas y/o arranques, cuyo volumen no cumpla con las disposiciones reglamentarias vigentes a la fecha de ejecución de la instalación interior de gas o la del momento en que se realiza la inspección, o con las indicadas en el estudio técnico específico de instalación de artefactos en los casos que corresponda</SelectItem>
+                          <SelectItem value="gabinete-medidores-ignicion">Todo gabinete de medidores de gas que sea compartido con fuentes de ignición</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
