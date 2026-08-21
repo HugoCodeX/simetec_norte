@@ -220,6 +220,28 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
     'gabinete-medidores-ignicion': 'Todo gabinete de medidores de gas que sea compartido con fuentes de ignición'
   }
 
+  // Etiquetas cortas para mostrar en el selector (el texto completo se guarda en la BD)
+  const etiquetasCortasMap: Record<string, string> = {
+    'fuga-gas-artefactos': 'Fuga de gas en artefactos',
+    'fuga-gas-red': 'Fuga de gas en la Red',
+    'fuga-gas-medidor': 'Fuga de gas en el Medidor',
+    'artefactos-sin-conducto': 'Artefactos sin conducto de evacuación',
+    'monoxido-carbono': 'Concentración CO superior a 50 ppm',
+    'calefon-bano': 'Calefon en recinto baño',
+    'dormitorio-artefacto': 'Dormitorio con artefacto tipo A',
+    'recinto-sin-ventilacion': 'Recinto sin ventilación',
+    'tubo-flexible': 'Tubo flexible en superficie caliente',
+    'arranque-sin-artefacto': 'Arranque sin artefacto ni sellado',
+    'flexible-danado': 'Flexible visiblemente dañado',
+    'artefacto-sala-clases': 'Artefacto en salas de clases',
+    'fuga-regulador': 'Fuga de gas en regulador',
+    'fuga-flexible': 'Fuga de gas flexible',
+    'artefacto-bano': 'Artefacto en baño o dormitorio',
+    'fuga-valvula': 'Fuga en válvula o manto cilindro GLP',
+    'recinto-volumen-reglamentario': 'Recinto con volumen no reglamentario',
+    'gabinete-medidores-ignicion': 'Gabinete de medidores con fuentes de ignición'
+  }
+
   // Función para obtener el código a partir del texto descriptivo
   const getCodigoFromTexto = (texto: string): string => {
     const entrada = Object.entries(tiposDefectoMap).find(([codigo, descripcion]) => descripcion === texto)
@@ -764,23 +786,31 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                           <SelectItem value="fuga-gas-artefactos">Fuga de gas en artefactos</SelectItem>
                           <SelectItem value="fuga-gas-red">Fuga de gas en la Red</SelectItem>
                           <SelectItem value="fuga-gas-medidor">Fuga de gas en el Medidor</SelectItem>
-                          <SelectItem value="artefactos-sin-conducto">Artefactos tipo B o C sin conducto de evacuación de gases de la combustión instalados en recintos interiores</SelectItem>
-                          <SelectItem value="monoxido-carbono">Existencia de concentración de monóxido de carbono (CO) ambiente superior a 50 ppm</SelectItem>
-                          <SelectItem value="calefon-bano">Prohibida la instalación de artefacto calefon en recinto baño</SelectItem>
-                          <SelectItem value="dormitorio-artefacto">Dormitorio con artefacto a gas tipo A</SelectItem>
-                          <SelectItem value="recinto-sin-ventilacion">Recinto sin ventilación que cuente con calefactores a gas tipo A</SelectItem>
-                          <SelectItem value="tubo-flexible">Conexión al abastecimiento de gas por medio de un tubo flexible no metálico (elastómero) en contacto con superficie caliente</SelectItem>
-                          <SelectItem value="arranque-sin-artefacto">Arranque sin artefacto a gas conectado y que no se encuentra debidamente sellado</SelectItem>
-                          <SelectItem value="flexible-danado">Flexible de conexión visiblemente dañado</SelectItem>
-                          <SelectItem value="artefacto-sala-clases">Artefacto a gas tipo A ubicados en salas de clases y/o bibliotecas</SelectItem>
+                          <SelectItem value="artefactos-sin-conducto">Artefactos sin conducto de evacuación</SelectItem>
+                          <SelectItem value="monoxido-carbono">Concentración CO superior a 50 ppm</SelectItem>
+                          <SelectItem value="calefon-bano">Calefon en recinto baño</SelectItem>
+                          <SelectItem value="dormitorio-artefacto">Dormitorio con artefacto tipo A</SelectItem>
+                          <SelectItem value="recinto-sin-ventilacion">Recinto sin ventilación</SelectItem>
+                          <SelectItem value="tubo-flexible">Tubo flexible en superficie caliente</SelectItem>
+                          <SelectItem value="arranque-sin-artefacto">Arranque sin artefacto ni sellado</SelectItem>
+                          <SelectItem value="flexible-danado">Flexible visiblemente dañado</SelectItem>
+                          <SelectItem value="artefacto-sala-clases">Artefacto en salas de clases</SelectItem>
                           <SelectItem value="fuga-regulador">Fuga de gas en regulador</SelectItem>
                           <SelectItem value="fuga-flexible">Fuga de gas flexible</SelectItem>
-                          <SelectItem value="artefacto-bano">Artefacto tipo A o B ubicados al interior de recinto baño, ducha, camarin o dormitorios</SelectItem>
-                          <SelectItem value="fuga-valvula">Fuga de gas en valvula o manto del cilindo de GLP</SelectItem>
-                          <SelectItem value="recinto-volumen-reglamentario">Todo recinto que cuente con artefacto a gas y/o arranques, cuyo volumen no cumpla con las disposiciones reglamentarias vigentes a la fecha de ejecución de la instalación interior de gas o la del momento en que se realiza la inspección, o con las indicadas en el estudio técnico específico de instalación de artefactos en los casos que corresponda</SelectItem>
-                          <SelectItem value="gabinete-medidores-ignicion">Todo gabinete de medidores de gas que sea compartido con fuentes de ignición</SelectItem>
+                          <SelectItem value="artefacto-bano">Artefacto en baño o dormitorio</SelectItem>
+                          <SelectItem value="fuga-valvula">Fuga en válvula o manto cilindro GLP</SelectItem>
+                          <SelectItem value="recinto-volumen-reglamentario">Recinto con volumen no reglamentario</SelectItem>
+                          <SelectItem value="gabinete-medidores-ignicion">Gabinete de medidores con fuentes de ignición</SelectItem>
                         </SelectContent>
                       </Select>
+                      {defecto.tipo && (
+                        <div className="mt-2 rounded-md border bg-slate-50 p-2">
+                          <p className="text-xs font-medium text-slate-500 mb-1">Descripción completa</p>
+                          <p className="text-xs text-slate-700 max-h-20 overflow-y-auto whitespace-pre-wrap break-words">
+                            {defecto.tipo}
+                          </p>
+                        </div>
+                      )}
                     </div>
                     <div>
                       <Label className="mb-2 block text-sm">Instalación Afectada</Label>
