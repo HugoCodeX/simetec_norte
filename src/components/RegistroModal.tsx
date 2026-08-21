@@ -393,7 +393,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} className="max-h-[90vh]">
       <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-[95vw] sm:mx-4 lg:max-w-xl xl:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
@@ -760,7 +760,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
                         <SelectTrigger className="bg-white rounded-sm h-10 min-w-0 truncate">
                           <SelectValue placeholder="Seleccione defecto" className="truncate" />
                         </SelectTrigger>
-                        <SelectContent className="max-w-[90vw] sm:max-w-[425px]">
+                        <SelectContent className="max-w-[90vw] sm:max-w-[425px] max-h-[200px] overflow-y-auto">
                           <SelectItem value="fuga-gas-artefactos">Fuga de gas en artefactos</SelectItem>
                           <SelectItem value="fuga-gas-red">Fuga de gas en la Red</SelectItem>
                           <SelectItem value="fuga-gas-medidor">Fuga de gas en el Medidor</SelectItem>
