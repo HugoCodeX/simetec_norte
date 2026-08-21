@@ -393,7 +393,7 @@ export default function RegistroModal({ open, onOpenChange, registroParaEditar, 
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} className="max-h-[90vh]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="w-full max-w-lg max-h-[90vh] overflow-y-auto overflow-x-hidden sm:max-w-[95vw] sm:mx-4 lg:max-w-xl xl:max-w-2xl">
         <DialogHeader>
           <DialogTitle>
