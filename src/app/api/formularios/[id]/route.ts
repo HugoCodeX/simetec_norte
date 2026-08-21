@@ -373,19 +373,28 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // Crear filas para los defectos con sus instalaciones correspondientes
     if (registro.defectosCriticos && registro.defectosCriticos.length > 0) {
       registro.defectosCriticos.forEach((defecto: any, index: number) => {
-        const rowHeight = rowH * 1.2
+        const col1Width = tableW * 0.6 - 12
+        const col2Width = tableW * 0.4 - 12
+        const textoCol1 = `${index + 1}. ${defecto.tipo}`
+        const textoCol2 = defecto.instalacionAfectada || ''
+
+        // Altura dinámica de la fila según el texto más largo de ambas columnas
+        doc.font('Calibri').fontSize(9)
+        const altoCol1 = doc.heightOfString(textoCol1, { width: col1Width })
+        const altoCol2 = doc.heightOfString(textoCol2, { width: col2Width })
+        const rowHeight = Math.max(rowH * 1.2, altoCol1 + 16, altoCol2 + 16)
 
         // Columna 1: Número y descripción del defecto
         doc.rect(tableX, y, tableW * 0.6, rowHeight).stroke()
-        doc.font('Calibri').fontSize(9).fillColor('black').text(`${index + 1}. ${defecto.tipo}`, tableX + 6, y + 8, {
-          width: tableW * 0.6 - 12,
+        doc.font('Calibri').fontSize(9).fillColor('black').text(textoCol1, tableX + 6, y + 8, {
+          width: col1Width,
           align: 'left'
         })
 
         // Columna 2: Instalación afectada
         doc.rect(tableX + tableW * 0.6, y, tableW * 0.4, rowHeight).stroke()
-        doc.font('Calibri').fontSize(9).fillColor('black').text(defecto.instalacionAfectada, tableX + tableW * 0.6 + 6, y + 8, {
-          width: tableW * 0.4 - 12,
+        doc.font('Calibri').fontSize(9).fillColor('black').text(textoCol2, tableX + tableW * 0.6 + 6, y + 8, {
+          width: col2Width,
           align: 'left'
         })
 
